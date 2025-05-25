@@ -31,8 +31,8 @@ class SearchViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             _searchQuery
-                .debounce(300)
-                .filter { it.length >= 2 }
+                .debounce(100)
+                .filter { it.length >= 3 }
                 .collect { query ->
                     search(query)
                 }
