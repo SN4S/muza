@@ -219,6 +219,27 @@ class MusicPlayerManager @Inject constructor(
         }
     }
 
+    fun stop() {
+        mediaController?.stop()
+        _currentSong.value = null
+        _playlist.value = emptyList()
+        _currentIndex.value = 0
+        _currentPosition.value = 0L
+        _duration.value = 0L
+        _isPlaying.value = false
+        _playbackState.value = Player.STATE_IDLE
+        positionUpdateJob?.cancel()
+    }
+
+    fun clearQueue() {
+        mediaController?.clearMediaItems()
+        _currentSong.value = null
+        _playlist.value = emptyList()
+        _currentIndex.value = 0
+        _currentPosition.value = 0L
+        _duration.value = 0L
+    }
+
     fun release() {
         positionUpdateJob?.cancel()
         scope.cancel()

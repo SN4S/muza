@@ -58,6 +58,14 @@ class PlayerViewModel @Inject constructor(
         playerManager.seekToIndex(index)
     }
 
+    fun stop() {
+        playerManager.stop()
+    }
+
+    fun clearQueue() {
+        playerManager.clearQueue()
+    }
+
     override fun onCleared() {
         super.onCleared()
         playerManager.release()

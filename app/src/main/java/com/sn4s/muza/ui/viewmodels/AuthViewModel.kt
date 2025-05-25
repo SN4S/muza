@@ -8,6 +8,7 @@ import com.sn4s.muza.data.model.User
 import com.sn4s.muza.data.model.UserCreate
 import com.sn4s.muza.data.repository.MusicRepository
 import com.sn4s.muza.data.security.TokenManager
+import com.sn4s.muza.player.MusicPlayerManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -16,7 +17,8 @@ import javax.inject.Inject
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val repository: MusicRepository,
-    private val tokenManager: TokenManager
+    private val tokenManager: TokenManager,
+    private val playerManager: MusicPlayerManager
 ) : ViewModel() {
 
     private val _isLoading = MutableStateFlow(false)
@@ -88,6 +90,7 @@ class AuthViewModel @Inject constructor(
 
     fun logout() {
         Log.d("AuthViewModel", "Logging out")
+        playerManager.stop()
         tokenManager.clearToken()
         _isAuthenticated.value = false
         Log.d("AuthViewModel", "Authentication state updated to: false")
