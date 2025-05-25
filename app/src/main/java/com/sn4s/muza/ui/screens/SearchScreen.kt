@@ -7,16 +7,32 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
+import com.sn4s.muza.di.NetworkModule
 import com.sn4s.muza.ui.viewmodels.SearchViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
+    navController: NavController,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+    LaunchedEffect(Unit) {
+        NetworkModule.unauthorizedEvent.collect {
+            if (currentRoute != "login") {
+                navController.navigate("login") {
+                    popUpTo(0) { inclusive = true } // Clear entire backstack
+                }
+            }
+        }
+    }
     val searchQuery by viewModel.searchQuery.collectAsState()
     val songs by viewModel.songs.collectAsState()
     val artists by viewModel.artists.collectAsState()

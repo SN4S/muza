@@ -5,18 +5,34 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
+import com.sn4s.muza.di.NetworkModule
 import com.sn4s.muza.ui.viewmodels.LibraryViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
+    navController: NavController,
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+    LaunchedEffect(Unit) {
+        NetworkModule.unauthorizedEvent.collect {
+            if (currentRoute != "login") {
+                navController.navigate("login") {
+                    popUpTo(0) { inclusive = true } // Clear entire backstack
+                }
+            }
+        }
+    }
     val playlists by viewModel.playlists.collectAsState()
     val albums by viewModel.albums.collectAsState()
     val likedSongs by viewModel.likedSongs.collectAsState()

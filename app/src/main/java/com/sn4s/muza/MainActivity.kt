@@ -51,21 +51,7 @@ fun MainScreen() {
 
     val hideBottomBarRoutes = listOf("login", "register")
     val scope = rememberCoroutineScope()
-    
-    LaunchedEffect(isAuthenticated) {
-        Log.d("MainScreen", "Authentication state changed: $isAuthenticated")
-    }
 
-    LaunchedEffect(Unit) {
-        NetworkModule.unauthorizedEvent.collect {
-            if (currentRoute != "login") {
-                navController.navigate("login") {
-                    popUpTo(0) { inclusive = true } // Clear entire backstack
-                }
-            }
-        }
-    }
-    
     Scaffold(
         bottomBar = {
             if (currentRoute !in hideBottomBarRoutes) {
@@ -102,9 +88,9 @@ fun MainScreen() {
                 )
             }
             
-            composable("home") { HomeScreen() }
-            composable("search") { SearchScreen() }
-            composable("library") { LibraryScreen() }
+            composable("home") { HomeScreen(navController) }
+            composable("search") { SearchScreen(navController) }
+            composable("library") { LibraryScreen(navController) }
             composable("profile") { ProfileScreen(navController) }
         }
     }
