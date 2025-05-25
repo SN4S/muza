@@ -16,6 +16,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.sn4s.muza.data.model.Song
 import com.sn4s.muza.ui.viewmodels.LikeViewModel
 import com.sn4s.muza.ui.viewmodels.PlayerViewModel
+import androidx.compose.material.icons.filled.PlaylistAdd
+import com.sn4s.muza.ui.components.AddToPlaylistDialog
 
 @Composable
 fun SongItem(
@@ -27,6 +29,8 @@ fun SongItem(
 ) {
     val isLiked by remember { derivedStateOf { likeViewModel.isLiked(song.id) } }
     val isLikeLoading by likeViewModel.isLoading.collectAsState()
+
+    var showAddToPlaylistDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(song.id) {
         likeViewModel.checkIfLiked(song.id)
@@ -71,6 +75,17 @@ fun SongItem(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Add to Playlist Button
+                IconButton(
+                    onClick = { showAddToPlaylistDialog = true }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlaylistAdd,
+                        contentDescription = "Add to Playlist",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
                 // Like Button
                 IconButton(
                     onClick = { likeViewModel.toggleLike(song.id) },
@@ -105,5 +120,13 @@ fun SongItem(
                 }
             }
         }
+    }
+
+    // Add to Playlist Dialog
+    if (showAddToPlaylistDialog) {
+        AddToPlaylistDialog(
+            songId = song.id,
+            onDismiss = { showAddToPlaylistDialog = false }
+        )
     }
 }
