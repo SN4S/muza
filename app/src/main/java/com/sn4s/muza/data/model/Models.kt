@@ -79,6 +79,19 @@ data class AlbumNested(
     val createdAt: String
 )
 
+data class AlbumCreate(
+    val title: String,
+    @SerializedName("release_date")
+    val releaseDate: String,
+    @SerializedName("cover_image")
+    val coverImage: String? = null
+)
+
+data class PlaylistCreate(
+    val name: String,
+    val description: String? = null
+)
+
 data class Playlist(
     val id: Int,
     val name: String,

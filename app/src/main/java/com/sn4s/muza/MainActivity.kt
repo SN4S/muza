@@ -18,9 +18,11 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.sn4s.muza.di.NetworkModule
 import com.sn4s.muza.ui.components.BottomNavBar
+import com.sn4s.muza.ui.components.MiniPlayer
 import com.sn4s.muza.ui.screens.*
 import com.sn4s.muza.ui.theme.MuzaTheme
 import com.sn4s.muza.ui.viewmodels.AuthViewModel
+import com.sn4s.muza.ui.viewmodels.PlayerViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -45,12 +47,15 @@ class MainActivity : ComponentActivity() {
 fun MainScreen() {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = hiltViewModel()
+    val playerViewModel: PlayerViewModel = hiltViewModel()
+
     val isAuthenticated by authViewModel.isAuthenticated.collectAsStateWithLifecycle()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val currentSong by playerViewModel.currentSong.collectAsState()
 
     val hideBottomBarRoutes = listOf("login", "register")
-    val scope = rememberCoroutineScope()
+    val hidePlayerRoutes = listOf("login", "register", "player")
 
     Scaffold(
         bottomBar = {
@@ -67,7 +72,7 @@ fun MainScreen() {
             composable("login") {
                 LoginScreen(
                     onNavigateToRegister = { navController.navigate("register") },
-                    onLoginSuccess = { 
+                    onLoginSuccess = {
                         Log.d("MainScreen", "Login success, navigating to home")
                         navController.navigate("home") {
                             popUpTo("login") { inclusive = true }
@@ -75,11 +80,11 @@ fun MainScreen() {
                     }
                 )
             }
-            
+
             composable("register") {
                 RegisterScreen(
                     onNavigateToLogin = { navController.navigate("login") },
-                    onRegisterSuccess = { 
+                    onRegisterSuccess = {
                         Log.d("MainScreen", "Register success, navigating to home")
                         navController.navigate("home") {
                             popUpTo("register") { inclusive = true }
@@ -87,11 +92,87 @@ fun MainScreen() {
                     }
                 )
             }
-            
-            composable("home") { HomeScreen(navController) }
-            composable("search") { SearchScreen(navController) }
-            composable("library") { LibraryScreen(navController) }
-            composable("profile") { ProfileScreen(navController) }
+
+            composable("home") {
+                HomeScreenWithPlayer(navController, playerViewModel)
+            }
+
+            composable("search") {
+                SearchScreenWithPlayer(navController, playerViewModel)
+            }
+
+            composable("library") {
+                LibraryScreenWithPlayer(navController, playerViewModel)
+            }
+
+            composable("upload") {
+                UploadScreen(navController)
+            }
+
+            composable("profile") {
+                ProfileScreen(navController)
+            }
+
+            composable("player") {
+                FullPlayerScreen(
+                    navController = navController,
+                    playerViewModel = playerViewModel
+                )
+            }
         }
+    }
+}
+
+@Composable
+fun HomeScreenWithPlayer(
+    navController: androidx.navigation.NavController,
+    playerViewModel: PlayerViewModel
+) {
+    androidx.compose.foundation.layout.Column {
+        androidx.compose.foundation.layout.Box(
+            modifier = androidx.compose.ui.Modifier.weight(1f)
+        ) {
+            HomeScreen(navController, playerViewModel = playerViewModel)
+        }
+        MiniPlayer(
+            onClick = { navController.navigate("player") },
+            viewModel = playerViewModel
+        )
+    }
+}
+
+@Composable
+fun SearchScreenWithPlayer(
+    navController: androidx.navigation.NavController,
+    playerViewModel: PlayerViewModel
+) {
+    androidx.compose.foundation.layout.Column {
+        androidx.compose.foundation.layout.Box(
+            modifier = androidx.compose.ui.Modifier.weight(1f)
+        ) {
+            SearchScreen(navController, playerViewModel = playerViewModel)
+        }
+        MiniPlayer(
+            onClick = { navController.navigate("player") },
+            viewModel = playerViewModel
+        )
+    }
+}
+
+@Composable
+fun LibraryScreenWithPlayer(
+    navController: androidx.navigation.NavController,
+    playerViewModel: PlayerViewModel
+) {
+    androidx.compose.foundation.layout.Column {
+        androidx.compose.foundation.layout.Box(
+            modifier = androidx.compose.ui.Modifier.weight(1f)
+        ) {
+            LibraryScreen(navController, playerViewModel = playerViewModel)
+        }
+        MiniPlayer(
+            onClick = { navController.navigate("player") },
+            viewModel = playerViewModel
+        )
     }
 }
