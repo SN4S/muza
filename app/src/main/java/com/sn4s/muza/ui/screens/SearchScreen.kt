@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,6 +17,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.sn4s.muza.di.NetworkModule
 import com.sn4s.muza.ui.viewmodels.PlayerViewModel
+import com.sn4s.muza.ui.components.SongItem
 import com.sn4s.muza.ui.viewmodels.SearchViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,46 +84,11 @@ fun SearchScreen(
                 }
 
                 items(songs) { song ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .clickable {
-                                playerViewModel?.playSong(song)
-                            }
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(
-                                    text = song.title,
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                Text(
-                                    text = song.creator.username,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-
-                            if (playerViewModel != null) {
-                                IconButton(
-                                    onClick = { playerViewModel.playSong(song) }
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.PlayArrow,
-                                        contentDescription = "Play"
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    SongItem(
+                        song = song,
+                        playerViewModel = playerViewModel,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
                 }
             }
 

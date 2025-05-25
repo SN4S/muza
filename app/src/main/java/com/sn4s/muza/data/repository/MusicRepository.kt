@@ -177,6 +177,44 @@ class MusicRepository @Inject constructor(
         emit(apiService.getLikedSongs(skip, limit))
     }
 
+    // Like System
+    suspend fun likeSong(songId: Int) {
+        apiService.likeSong(songId)
+    }
+
+    suspend fun unlikeSong(songId: Int) {
+        apiService.unlikeSong(songId)
+    }
+
+    suspend fun isSongLiked(songId: Int): Boolean {
+        return apiService.isSongLiked(songId).isLiked
+    }
+
+    // Genres
+    fun getGenres(skip: Int = 0, limit: Int = 100): Flow<List<Genre>> = flow {
+        emit(apiService.getGenres(skip, limit))
+    }
+
+    suspend fun getGenre(genreId: Int): Genre {
+        return apiService.getGenre(genreId)
+    }
+
+    suspend fun createGenre(genre: GenreCreate): Genre {
+        return apiService.createGenre(genre)
+    }
+
+    suspend fun updateGenre(genreId: Int, genre: GenreCreate): Genre {
+        return apiService.updateGenre(genreId, genre)
+    }
+
+    suspend fun deleteGenre(genreId: Int) {
+        apiService.deleteGenre(genreId)
+    }
+
+    fun getGenreSongs(genreId: Int, skip: Int = 0, limit: Int = 100): Flow<List<Song>> = flow {
+        emit(apiService.getGenreSongs(genreId, skip, limit))
+    }
+
     // Public user profiles
     suspend fun getUser(userId: Int): UserNested {
         return apiService.getUser(userId)

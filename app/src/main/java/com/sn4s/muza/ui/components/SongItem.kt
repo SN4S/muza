@@ -1,0 +1,109 @@
+package com.sn4s.muza.ui.components
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.sn4s.muza.data.model.Song
+import com.sn4s.muza.ui.viewmodels.LikeViewModel
+import com.sn4s.muza.ui.viewmodels.PlayerViewModel
+
+@Composable
+fun SongItem(
+    song: Song,
+    onPlayClick: ((Song) -> Unit)? = null,
+    playerViewModel: PlayerViewModel? = null,
+    likeViewModel: LikeViewModel = hiltViewModel(),
+    modifier: Modifier = Modifier
+) {
+    val isLiked by remember { derivedStateOf { likeViewModel.isLiked(song.id) } }
+    val isLikeLoading by likeViewModel.isLoading.collectAsState()
+
+    LaunchedEffect(song.id) {
+        likeViewModel.checkIfLiked(song.id)
+    }
+
+    Card(
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Song Info
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = song.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = song.creator.username,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (song.likeCount > 0) {
+                    Text(
+                        text = "${song.likeCount} likes",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // Controls
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Like Button
+                IconButton(
+                    onClick = { likeViewModel.toggleLike(song.id) },
+                    enabled = !isLikeLoading
+                ) {
+                    if (isLikeLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Icon(
+                            imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = if (isLiked) "Unlike" else "Like",
+                            tint = if (isLiked) Color.Red else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                // Play Button
+                if (playerViewModel != null || onPlayClick != null) {
+                    IconButton(
+                        onClick = {
+                            onPlayClick?.invoke(song) ?: playerViewModel?.playSong(song)
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = "Play"
+                        )
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,4 +1,3 @@
-
 package com.sn4s.muza.ui.screens
 
 import androidx.compose.foundation.clickable
@@ -6,14 +5,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -21,6 +17,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.sn4s.muza.di.NetworkModule
 import com.sn4s.muza.ui.viewmodels.HomeViewModel
+import com.sn4s.muza.ui.components.SongItem
 import com.sn4s.muza.ui.viewmodels.PlayerViewModel
 
 @Composable
@@ -58,46 +55,11 @@ fun HomeScreen(
         }
 
         items(songs) { song ->
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)
-                    .clickable {
-                        playerViewModel?.playSong(song)
-                    }
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(
-                            text = song.title,
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = song.creator.username,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    if (playerViewModel != null) {
-                        IconButton(
-                            onClick = { playerViewModel.playSong(song) }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = "Play"
-                            )
-                        }
-                    }
-                }
-            }
+            SongItem(
+                song = song,
+                playerViewModel = playerViewModel,
+                modifier = Modifier.padding(vertical = 4.dp)
+            )
         }
 
         item {

@@ -64,6 +64,16 @@ interface ApiService {
     @DELETE("songs/{song_id}")
     suspend fun deleteSong(@Path("song_id") songId: Int)
 
+    // Like System
+    @POST("songs/{song_id}/like")
+    suspend fun likeSong(@Path("song_id") songId: Int)
+
+    @DELETE("songs/{song_id}/like")
+    suspend fun unlikeSong(@Path("song_id") songId: Int)
+
+    @GET("songs/{song_id}/is-liked")
+    suspend fun isSongLiked(@Path("song_id") songId: Int): LikeResponse
+
     // Search
     @GET("search/songs")
     suspend fun searchSongs(
@@ -217,4 +227,33 @@ interface ApiService {
         @Path("playlist_id") playlistId: Int,
         @Path("song_id") songId: Int
     )
+
+    // Genres
+    @GET("genres")
+    suspend fun getGenres(
+        @Query("skip") skip: Int = 0,
+        @Query("limit") limit: Int = 100
+    ): List<Genre>
+
+    @GET("genres/{genre_id}")
+    suspend fun getGenre(@Path("genre_id") genreId: Int): Genre
+
+    @POST("genres/")
+    suspend fun createGenre(@Body genre: GenreCreate): Genre
+
+    @PUT("genres/{genre_id}")
+    suspend fun updateGenre(
+        @Path("genre_id") genreId: Int,
+        @Body genre: GenreCreate
+    ): Genre
+
+    @DELETE("genres/{genre_id}")
+    suspend fun deleteGenre(@Path("genre_id") genreId: Int)
+
+    @GET("genres/{genre_id}/songs")
+    suspend fun getGenreSongs(
+        @Path("genre_id") genreId: Int,
+        @Query("skip") skip: Int = 0,
+        @Query("limit") limit: Int = 100
+    ): List<Song>
 }

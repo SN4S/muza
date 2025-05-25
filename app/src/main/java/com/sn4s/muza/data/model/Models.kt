@@ -1,6 +1,5 @@
 package com.sn4s.muza.data.model
 
-import java.time.LocalDateTime
 import com.google.gson.annotations.SerializedName
 
 data class User(
@@ -40,7 +39,14 @@ data class Song(
     val creatorId: Int,
     @SerializedName("created_at")
     val createdAt: String,
-    val creator: UserNested
+    val creator: UserNested,
+    @SerializedName("like_count")
+    val likeCount: Int = 0
+)
+
+data class LikeResponse(
+    @SerializedName("is_liked")
+    val isLiked: Boolean
 )
 
 data class SongNested(
@@ -50,7 +56,9 @@ data class SongNested(
     @SerializedName("file_path")
     val filePath: String,
     @SerializedName("created_at")
-    val createdAt: String
+    val createdAt: String,
+    @SerializedName("like_count")
+    val likeCount: Int
 )
 
 data class Album(
@@ -92,6 +100,10 @@ data class PlaylistCreate(
     val description: String? = null
 )
 
+data class GenreCreate(
+    val name: String,
+    val description: String? = null
+)
 data class Playlist(
     val id: Int,
     val name: String,
