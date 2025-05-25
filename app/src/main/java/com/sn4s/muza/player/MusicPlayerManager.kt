@@ -101,7 +101,7 @@ class MusicPlayerManager @Inject constructor(
                 while (isActive && _isPlaying.value) {
                     updatePosition()
                     updateDuration()
-                    delay(1000) // Update every second
+                    delay(500) // Update every halfsecond
                 }
             }
         }
