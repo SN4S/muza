@@ -61,11 +61,11 @@ fun BottomNavBar(
 
         if (isArtist) {
             NavigationBarItem(
-                icon = { Icon(Icons.Default.Upload, contentDescription = "Upload") },
-                label = { Text("Upload") },
-                selected = currentRoute == "upload",
+                icon = { Icon(Icons.Default.Star, contentDescription = "Artist") },
+                label = { Text("Artist") },
+                selected = currentRoute == "artist",
                 onClick = {
-                    navController.navigate("upload") {
+                    navController.navigate("artist") {
                         popUpTo("home") { inclusive = false }
                         launchSingleTop = true
                     }

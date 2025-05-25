@@ -100,7 +100,7 @@ fun SongItem(
                         Icon(
                             imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = if (isLiked) "Unlike" else "Like",
-                            tint = if (isLiked) Color.Red else MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = if (isLiked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }

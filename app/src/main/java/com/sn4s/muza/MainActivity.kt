@@ -110,6 +110,10 @@ fun MainScreen() {
                 LibraryScreenWithPlayer(navController, playerViewModel)
             }
 
+            composable("artist") {
+                ArtistScreenWithPlayer(navController,playerViewModel)
+            }
+
             composable("upload") {
                 UploadScreen(navController)
             }
@@ -193,6 +197,24 @@ fun LibraryScreenWithPlayer(
             modifier = androidx.compose.ui.Modifier.weight(1f)
         ) {
             LibraryScreen(navController, playerViewModel = playerViewModel)
+        }
+        MiniPlayer(
+            onClick = { navController.navigate("player") },
+            viewModel = playerViewModel
+        )
+    }
+}
+
+@Composable
+fun ArtistScreenWithPlayer(
+    navController: androidx.navigation.NavController,
+    playerViewModel: PlayerViewModel
+) {
+    androidx.compose.foundation.layout.Column {
+        androidx.compose.foundation.layout.Box(
+            modifier = androidx.compose.ui.Modifier.weight(1f)
+        ) {
+            ArtistScreen(navController, playerViewModel = playerViewModel)
         }
         MiniPlayer(
             onClick = { navController.navigate("player") },
