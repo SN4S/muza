@@ -1,6 +1,8 @@
 package com.sn4s.muza.di
 
+import android.util.Log
 import com.sn4s.muza.data.network.ApiService
+import com.sn4s.muza.data.security.TokenManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -17,8 +19,25 @@ object NetworkModule {
     
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
+    fun provideOkHttpClient(tokenManager: TokenManager): OkHttpClient {
         return OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val original = chain.request()
+                val token = tokenManager.getToken()
+                
+                val request = if (token != null) {
+                    Log.d("NetworkModule", "Adding token to request: ${token.tokenType} ${token.accessToken}")
+                    original.newBuilder()
+                        .header("Authorization", "${token.tokenType} ${token.accessToken}")
+                        .method(original.method, original.body)
+                        .build()
+                } else {
+                    Log.d("NetworkModule", "No token available for request")
+                    original
+                }
+                
+                chain.proceed(request)
+            }
             .addInterceptor(HttpLoggingInterceptor().apply {
                 level = HttpLoggingInterceptor.Level.BODY
             })
@@ -29,7 +48,7 @@ object NetworkModule {
     @Singleton
     fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
         return Retrofit.Builder()
-            .baseUrl("http://192.168.88.188:8000/") // TODO: Replace with actual API base URL
+            .baseUrl("http://192.168.88.188:8000") // TODO: Replace with actual API base URL
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

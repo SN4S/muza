@@ -1,6 +1,8 @@
 package com.sn4s.muza.ui.viewmodels
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.sn4s.muza.data.model.User
 import com.sn4s.muza.data.repository.MusicRepository
@@ -11,7 +13,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val repository: MusicRepository
+    private val repository: MusicRepository,
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _user = MutableStateFlow<User?>(null)
@@ -43,6 +46,8 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun logout() {
-        // TODO: Implement logout functionality
+        // Get the AuthViewModel from the SavedStateHandle
+        val authViewModel = savedStateHandle.get<AuthViewModel>("authViewModel")
+        authViewModel?.logout()
     }
 } 

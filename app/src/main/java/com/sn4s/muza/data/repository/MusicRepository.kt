@@ -1,5 +1,6 @@
 package com.sn4s.muza.data.repository
 
+import android.util.Log
 import com.sn4s.muza.data.model.*
 import com.sn4s.muza.data.network.ApiService
 import kotlinx.coroutines.flow.Flow
@@ -12,7 +13,10 @@ class MusicRepository @Inject constructor(
     private val apiService: ApiService
 ) {
     suspend fun login(username: String, password: String): Token {
-        return apiService.login(username, password)
+        Log.d("MusicRepository", "Attempting login for user: $username")
+        val response = apiService.login(username, password)
+        Log.d("MusicRepository", "Login response: accessToken=${response.accessToken}, tokenType=${response.tokenType}")
+        return response
     }
 
     suspend fun register(user: UserCreate): User {

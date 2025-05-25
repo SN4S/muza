@@ -8,6 +8,7 @@ interface ApiService {
     @POST("auth/register")
     suspend fun register(@Body user: UserCreate): User
 
+    @FormUrlEncoded
     @POST("auth/token")
     suspend fun login(
         @Field("username") username: String,

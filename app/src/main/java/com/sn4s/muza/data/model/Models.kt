@@ -1,6 +1,7 @@
 package com.sn4s.muza.data.model
 
 import java.time.LocalDateTime
+import com.google.gson.annotations.SerializedName
 
 data class User(
     val id: Int,
@@ -78,7 +79,9 @@ data class Genre(
 )
 
 data class Token(
+    @SerializedName("access_token")
     val accessToken: String,
+    @SerializedName("token_type")
     val tokenType: String
 )
 
