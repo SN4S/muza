@@ -56,12 +56,12 @@ fun MainScreen() {
         Log.d("MainScreen", "Authentication state changed: $isAuthenticated")
     }
 
-    // Handle unauthorized events
     LaunchedEffect(Unit) {
         NetworkModule.unauthorizedEvent.collect {
-            Log.d("MainScreen", "Received unauthorized event, navigating to login")
-            navController.navigate("login") {
-                popUpTo("home") { inclusive = true }
+            if (currentRoute != "login") {
+                navController.navigate("login") {
+                    popUpTo(0) { inclusive = true } // Clear entire backstack
+                }
             }
         }
     }
