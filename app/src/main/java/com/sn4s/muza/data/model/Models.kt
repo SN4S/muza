@@ -58,7 +58,8 @@ data class SongNested(
     @SerializedName("created_at")
     val createdAt: String,
     @SerializedName("like_count")
-    val likeCount: Int
+    val likeCount: Int,
+    val creator: UserNested
 )
 
 data class Album(
