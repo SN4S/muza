@@ -7,6 +7,11 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -17,6 +22,9 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
     
+    private val _unauthorizedEvent = MutableSharedFlow<Unit>()
+    val unauthorizedEvent: SharedFlow<Unit> = _unauthorizedEvent
+
     @Provides
     @Singleton
     fun provideOkHttpClient(tokenManager: TokenManager): OkHttpClient {
@@ -36,7 +44,22 @@ object NetworkModule {
                     original
                 }
                 
-                chain.proceed(request)
+                try {
+                    val response = chain.proceed(request)
+                    if (response.code == 401) {
+                        Log.d("NetworkModule", "Received 401 response, triggering logout")
+                        // Clear token
+                        tokenManager.clearToken()
+                        // Emit unauthorized event
+                        CoroutineScope(Dispatchers.Main).launch {
+                            _unauthorizedEvent.emit(Unit)
+                        }
+                    }
+                    response
+                } catch (e: Exception) {
+                    Log.e("NetworkModule", "Network request failed", e)
+                    throw e
+                }
             }
             .addInterceptor(HttpLoggingInterceptor().apply {
                 level = HttpLoggingInterceptor.Level.BODY

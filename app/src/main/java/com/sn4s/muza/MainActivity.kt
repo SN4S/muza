@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -15,6 +16,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.sn4s.muza.di.NetworkModule
 import com.sn4s.muza.ui.components.BottomNavBar
 import com.sn4s.muza.ui.screens.*
 import com.sn4s.muza.ui.theme.MuzaTheme
@@ -48,7 +50,22 @@ fun MainScreen() {
     val currentRoute = navBackStackEntry?.destination?.route
 
     val hideBottomBarRoutes = listOf("login", "register")
+    val scope = rememberCoroutineScope()
+    
+    LaunchedEffect(isAuthenticated) {
+        Log.d("MainScreen", "Authentication state changed: $isAuthenticated")
+    }
 
+    // Handle unauthorized events
+    LaunchedEffect(Unit) {
+        NetworkModule.unauthorizedEvent.collect {
+            Log.d("MainScreen", "Received unauthorized event, navigating to login")
+            navController.navigate("login") {
+                popUpTo("home") { inclusive = true }
+            }
+        }
+    }
+    
     Scaffold(
         bottomBar = {
             if (currentRoute !in hideBottomBarRoutes) {
