@@ -4,6 +4,7 @@ import android.util.Log
 import com.sn4s.muza.data.model.*
 import com.sn4s.muza.data.network.ApiService
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -61,5 +62,21 @@ class MusicRepository @Inject constructor(
 
     fun getLikedSongs(skip: Int = 0, limit: Int = 100): Flow<List<Song>> = flow {
         emit(apiService.getLikedSongs(skip, limit))
+    }
+
+    suspend fun updateProfile(username: String, bio: String?, isArtist: Boolean): User {
+        Log.d("MusicRepository", "Updating profile with isArtist: $isArtist")
+        val currentUser = getCurrentUser().first()
+        val userBase = UserBase(
+            email = currentUser.email,
+            username = username,
+            bio = bio,
+            image = currentUser.image,
+            isArtist = isArtist
+        )
+        Log.d("MusicRepository", "Sending update request with UserBase: $userBase")
+        val updatedUser = apiService.updateProfile(userBase)
+        Log.d("MusicRepository", "Received updated user: $updatedUser")
+        return updatedUser
     }
 } 

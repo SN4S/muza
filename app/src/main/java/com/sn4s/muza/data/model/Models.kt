@@ -9,9 +9,12 @@ data class User(
     val username: String,
     val bio: String? = null,
     val image: String? = null,
+    @SerializedName("is_artist")
     val isArtist: Boolean = false,
+    @SerializedName("is_active")
     val isActive: Boolean,
-    val createdAt: LocalDateTime,
+    @SerializedName("created_at")
+    val createdAt: String,
     val songs: List<SongNested> = emptyList(),
     val albums: List<AlbumNested> = emptyList()
 )
@@ -21,6 +24,7 @@ data class UserNested(
     val username: String,
     val bio: String? = null,
     val image: String? = null,
+    @SerializedName("is_artist")
     val isArtist: Boolean
 )
 
@@ -28,10 +32,14 @@ data class Song(
     val id: Int,
     val title: String,
     val duration: Int? = null,
+    @SerializedName("file_path")
     val filePath: String,
+    @SerializedName("album_id")
     val albumId: Int? = null,
+    @SerializedName("creator_id")
     val creatorId: Int,
-    val createdAt: LocalDateTime,
+    @SerializedName("created_at")
+    val createdAt: String,
     val creator: UserNested
 )
 
@@ -39,17 +47,23 @@ data class SongNested(
     val id: Int,
     val title: String,
     val duration: Int,
+    @SerializedName("file_path")
     val filePath: String,
-    val createdAt: LocalDateTime
+    @SerializedName("created_at")
+    val createdAt: String
 )
 
 data class Album(
     val id: Int,
     val title: String,
-    val releaseDate: LocalDateTime,
+    @SerializedName("release_date")
+    val releaseDate: String,
+    @SerializedName("cover_image")
     val coverImage: String? = null,
+    @SerializedName("creator_id")
     val creatorId: Int,
-    val createdAt: LocalDateTime,
+    @SerializedName("created_at")
+    val createdAt: String,
     val songs: List<SongNested> = emptyList(),
     val creator: UserNested
 )
@@ -57,17 +71,22 @@ data class Album(
 data class AlbumNested(
     val id: Int,
     val title: String,
-    val releaseDate: LocalDateTime,
+    @SerializedName("release_date")
+    val releaseDate: String,
+    @SerializedName("cover_image")
     val coverImage: String? = null,
-    val createdAt: LocalDateTime
+    @SerializedName("created_at")
+    val createdAt: String
 )
 
 data class Playlist(
     val id: Int,
     val name: String,
     val description: String? = null,
+    @SerializedName("owner_id")
     val ownerId: Int,
-    val createdAt: LocalDateTime,
+    @SerializedName("created_at")
+    val createdAt: String,
     val songs: List<SongNested> = emptyList()
 )
 
@@ -91,5 +110,21 @@ data class UserCreate(
     val password: String,
     val bio: String? = null,
     val image: String? = null,
+    @SerializedName("is_artist")
+    val isArtist: Boolean = false
+)
+
+data class UserUpdate(
+    val username: String? = null,
+    val bio: String? = null,
+    val image: String? = null
+)
+
+data class UserBase(
+    val email: String,
+    val username: String,
+    val bio: String? = null,
+    val image: String? = null,
+    @SerializedName("is_artist")
     val isArtist: Boolean = false
 ) 

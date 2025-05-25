@@ -78,4 +78,9 @@ interface ApiService {
         @Query("skip") skip: Int = 0,
         @Query("limit") limit: Int = 100
     ): List<Song>
+
+    @PUT("users/me")
+    suspend fun updateProfile(
+        @Body user: UserBase
+    ): User
 } 
