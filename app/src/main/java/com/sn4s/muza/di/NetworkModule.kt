@@ -1,6 +1,7 @@
 package com.sn4s.muza.di
 
 import android.util.Log
+import com.sn4s.muza.data.model.RefreshTokenRequest
 import com.sn4s.muza.data.network.ApiService
 import com.sn4s.muza.data.security.TokenManager
 import dagger.Module
@@ -17,69 +18,97 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Singleton
+import kotlinx.coroutines.runBlocking
+import okhttp3.Authenticator
+
 
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
-    
     private val _unauthorizedEvent = MutableSharedFlow<Unit>()
     val unauthorizedEvent: SharedFlow<Unit> = _unauthorizedEvent
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(tokenManager: TokenManager): OkHttpClient {
+    fun provideTokenAuthenticator(tokenManager: TokenManager): Authenticator {
+        return Authenticator { _, response ->
+            val token = tokenManager.getToken()
+            if (token?.refreshToken == null) {
+                // No refresh token, can't authenticate
+                CoroutineScope(Dispatchers.Main).launch {
+                    _unauthorizedEvent.emit(Unit)
+                }
+                return@Authenticator null
+            }
+
+            try {
+                // Create a simple client for refresh call
+                val refreshClient = OkHttpClient.Builder().build()
+                val refreshRetrofit = Retrofit.Builder()
+                    .baseUrl("http://192.168.88.188:8000/")
+                    .client(refreshClient)
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build()
+                val refreshService = refreshRetrofit.create(ApiService::class.java)
+
+                val refreshRequest = RefreshTokenRequest(token.refreshToken)
+                val newToken = runBlocking { refreshService.refreshToken(refreshRequest) }
+                tokenManager.saveToken(newToken)
+
+                // Return new request with fresh token
+                response.request.newBuilder()
+                    .header("Authorization", "${newToken.tokenType} ${newToken.accessToken}")
+                    .build()
+            } catch (e: Exception) {
+                Log.e("NetworkModule", "Token refresh failed", e)
+                tokenManager.clearToken()
+                CoroutineScope(Dispatchers.Main).launch {
+                    _unauthorizedEvent.emit(Unit)
+                }
+                null
+            }
+        }
+    }
+
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(
+        tokenManager: TokenManager,
+        authenticator: Authenticator
+    ): OkHttpClient {
         return OkHttpClient.Builder()
             .addInterceptor { chain ->
                 val original = chain.request()
                 val token = tokenManager.getToken()
-                
+
                 val request = if (token != null) {
-                    Log.d("NetworkModule", "Adding token to request: ${token.tokenType} ${token.accessToken}")
                     original.newBuilder()
                         .header("Authorization", "${token.tokenType} ${token.accessToken}")
-                        .method(original.method, original.body)
                         .build()
-                } else {
-                    Log.d("NetworkModule", "No token available for request")
-                    original
-                }
-                
-                try {
-                    val response = chain.proceed(request)
-                    if (response.code == 401) {
-                        Log.d("NetworkModule", "Received 401 response, triggering logout")
-                        // Clear token
-                        tokenManager.clearToken()
-                        // Emit unauthorized event
-                        CoroutineScope(Dispatchers.Main).launch {
-                            _unauthorizedEvent.emit(Unit)
-                        }
-                    }
-                    response
-                } catch (e: Exception) {
-                    Log.e("NetworkModule", "Network request failed", e)
-                    throw e
-                }
+                } else original
+
+                chain.proceed(request)
             }
+            .authenticator(authenticator)
             .addInterceptor(HttpLoggingInterceptor().apply {
                 level = HttpLoggingInterceptor.Level.BODY
             })
             .build()
     }
-    
+
     @Provides
     @Singleton
     fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
         return Retrofit.Builder()
-            .baseUrl("http://192.168.88.188:8000") // TODO: Replace with actual API base URL
+            .baseUrl("http://192.168.88.188:8000/")
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
-    
+
     @Provides
     @Singleton
     fun provideApiService(retrofit: Retrofit): ApiService {
         return retrofit.create(ApiService::class.java)
     }
-} 
+}
