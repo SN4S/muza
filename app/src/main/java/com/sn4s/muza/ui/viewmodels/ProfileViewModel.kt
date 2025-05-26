@@ -15,7 +15,8 @@ import javax.inject.Inject
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val repository: MusicRepository,
-    private val savedStateHandle: SavedStateHandle
+    private val savedStateHandle: SavedStateHandle,
+    //private val authViewModel: AuthViewModel
 ) : ViewModel() {
 
     private val _user = MutableStateFlow<User?>(null)
@@ -111,8 +112,13 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun logout() {
-        // Get the AuthViewModel from the SavedStateHandle
-        val authViewModel = savedStateHandle.get<AuthViewModel>("authViewModel")
-        authViewModel?.logout()
+//        // Get the AuthViewModel from the SavedStateHandle
+//        val authViewModel = savedStateHandle.get<AuthViewModel>("authViewModel")
+//        authViewModel?.logout()
+
+        //old and janky
+        viewModelScope.launch {
+            repository.logout()
+        }
     }
 } 

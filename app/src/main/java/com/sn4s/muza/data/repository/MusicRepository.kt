@@ -3,6 +3,8 @@ package com.sn4s.muza.data.repository
 import android.util.Log
 import com.sn4s.muza.data.model.*
 import com.sn4s.muza.data.network.ApiService
+import com.sn4s.muza.data.security.TokenManager
+import com.sn4s.muza.player.MusicPlayerManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -13,7 +15,9 @@ import javax.inject.Singleton
 
 @Singleton
 class MusicRepository @Inject constructor(
-    private val apiService: ApiService
+    private val apiService: ApiService,
+    private val tokenManager: TokenManager,
+    private val playerManager: MusicPlayerManager
 ) {
     // Auth
     suspend fun login(username: String, password: String): Token {
@@ -226,5 +230,10 @@ class MusicRepository @Inject constructor(
 
     fun getUserAlbums(userId: Int, skip: Int = 0, limit: Int = 100): Flow<List<Album>> = flow {
         emit(apiService.getUserAlbums(userId, skip, limit))
+    }
+
+    suspend fun logout() {
+        playerManager.stop()
+        tokenManager.clearToken()
     }
 }
