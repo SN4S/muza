@@ -135,6 +135,9 @@ fun MainScreen() {
                 )
             }
 
+            composable("liked_songs") {
+                LikedSongsScreenWithPlayer(navController, playerViewModel)
+            }
 
         }
     }
@@ -150,6 +153,24 @@ fun HomeScreenWithPlayer(
             modifier = androidx.compose.ui.Modifier.weight(1f)
         ) {
             HomeScreen(navController, playerViewModel = playerViewModel)
+        }
+        MiniPlayer(
+            onClick = { navController.navigate("player") },
+            viewModel = playerViewModel
+        )
+    }
+}
+
+@Composable
+fun LikedSongsScreenWithPlayer(
+    navController: androidx.navigation.NavController,
+    playerViewModel: PlayerViewModel
+) {
+    androidx.compose.foundation.layout.Column {
+        androidx.compose.foundation.layout.Box(
+            modifier = androidx.compose.ui.Modifier.weight(1f)
+        ) {
+            LikedSongsScreen(navController, playerViewModel)
         }
         MiniPlayer(
             onClick = { navController.navigate("player") },

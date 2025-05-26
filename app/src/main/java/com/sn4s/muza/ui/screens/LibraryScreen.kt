@@ -71,7 +71,8 @@ fun LibraryScreen(
         item {
             QuickAccessSection(
                 likedSongs = likedSongs,
-                playerViewModel = playerViewModel
+                playerViewModel = playerViewModel,
+                navController=navController
             )
         }
 
@@ -256,7 +257,8 @@ private fun LibraryHeader(
 @Composable
 private fun QuickAccessSection(
     likedSongs: List<Song>,
-    playerViewModel: PlayerViewModel?
+    playerViewModel: PlayerViewModel?,
+    navController: NavController,
 ) {
     Column {
         Text(
@@ -275,9 +277,7 @@ private fun QuickAccessSection(
                     title = "Liked Songs",
                     subtitle = "${likedSongs.size} songs",
                     onClick = {
-                        if (likedSongs.isNotEmpty()) {
-                            playerViewModel?.playPlaylist(likedSongs)
-                        }
+                        navController.navigate("liked_songs")
                     },
                     enabled = likedSongs.isNotEmpty(),
                     containerColor = MaterialTheme.colorScheme.primaryContainer
