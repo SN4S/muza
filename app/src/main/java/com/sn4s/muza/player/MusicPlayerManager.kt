@@ -2,6 +2,8 @@ package com.sn4s.muza.player
 
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
+import android.util.Log
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
@@ -27,6 +29,7 @@ class MusicPlayerManager @Inject constructor(
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var positionUpdateJob: Job? = null
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var connectionRetryJob: Job? = null
 
     private val _currentSong = MutableStateFlow<Song?>(null)
     val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
@@ -50,20 +53,63 @@ class MusicPlayerManager @Inject constructor(
     val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
 
     init {
+        startService()
         initializeController()
     }
 
+    private fun startService() {
+        val intent = Intent(context, MusicPlayerService::class.java)
+        context.startForegroundService(intent)
+    }
+
     private fun initializeController() {
+        connectionRetryJob?.cancel()
+
         val sessionToken = SessionToken(
             context,
             ComponentName(context, MusicPlayerService::class.java)
         )
 
+        controllerFuture?.let { future ->
+            MediaController.releaseFuture(future)
+        }
+
         controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
         controllerFuture?.addListener({
-            mediaController = controllerFuture?.get()
-            setupPlayerListener()
+            try {
+                mediaController?.release()
+                mediaController = controllerFuture?.get()
+                if (mediaController?.isConnected == true) {
+                    Log.d("MusicPlayerManager", "MediaController connected successfully")
+                    setupPlayerListener()
+                } else {
+                    Log.w("MusicPlayerManager", "MediaController not connected")
+                    scheduleReconnection()
+                }
+            } catch (e: Exception) {
+                Log.e("MusicPlayerManager", "Failed to connect to service", e)
+                scheduleReconnection()
+            }
         }, MoreExecutors.directExecutor())
+    }
+
+    private fun scheduleReconnection() {
+        connectionRetryJob?.cancel()
+        connectionRetryJob = scope.launch {
+            delay(2000) // Wait 2 seconds before retry
+            Log.d("MusicPlayerManager", "Retrying connection to MediaController")
+            initializeController()
+        }
+    }
+
+    private fun ensureConnected(): Boolean {
+        return if (mediaController?.isConnected == true) {
+            true
+        } else {
+            Log.w("MusicPlayerManager", "Controller not connected, attempting reconnection")
+            initializeController()
+            false
+        }
     }
 
     private fun setupPlayerListener() {
@@ -101,7 +147,7 @@ class MusicPlayerManager @Inject constructor(
                 while (isActive && _isPlaying.value) {
                     updatePosition()
                     updateDuration()
-                    delay(500) // Update every halfsecond
+                    delay(500) // Update every half second
                 }
             }
         }
@@ -123,6 +169,15 @@ class MusicPlayerManager @Inject constructor(
     }
 
     fun playSong(song: Song, baseUrl: String = "http://192.168.88.188:8000") {
+        if (!ensureConnected()) {
+            // Schedule for when connected
+            scope.launch {
+                delay(1000)
+                playSong(song, baseUrl)
+            }
+            return
+        }
+
         val streamUrl = "$baseUrl/songs/${song.id}/stream"
         val mediaItem = MediaItem.Builder()
             .setMediaId(song.id.toString())
@@ -152,6 +207,15 @@ class MusicPlayerManager @Inject constructor(
     }
 
     fun playPlaylist(songs: List<Song>, startIndex: Int = 0, baseUrl: String = "http://192.168.88.188:8000") {
+        if (!ensureConnected()) {
+            // Schedule for when connected
+            scope.launch {
+                delay(1000)
+                playPlaylist(songs, startIndex, baseUrl)
+            }
+            return
+        }
+
         val mediaItems = songs.map { song ->
             val streamUrl = "$baseUrl/songs/${song.id}/stream"
             MediaItem.Builder()
@@ -183,28 +247,38 @@ class MusicPlayerManager @Inject constructor(
     }
 
     fun play() {
-        mediaController?.play()
+        if (ensureConnected()) {
+            mediaController?.play()
+        }
     }
 
     fun pause() {
-        mediaController?.pause()
+        if (ensureConnected()) {
+            mediaController?.pause()
+        }
     }
 
     fun seekTo(position: Long) {
-        mediaController?.seekTo(position)
-        _currentPosition.value = position // Immediate UI update
+        if (ensureConnected()) {
+            mediaController?.seekTo(position)
+            _currentPosition.value = position // Immediate UI update
+        }
     }
 
     fun skipToNext() {
-        mediaController?.seekToNext()
+        if (ensureConnected()) {
+            mediaController?.seekToNext()
+        }
     }
 
     fun skipToPrevious() {
-        mediaController?.seekToPrevious()
+        if (ensureConnected()) {
+            mediaController?.seekToPrevious()
+        }
     }
 
     fun seekToIndex(index: Int) {
-        if (index in 0 until _playlist.value.size) {
+        if (ensureConnected() && index in 0 until _playlist.value.size) {
             mediaController?.seekTo(index, 0)
         }
     }
@@ -220,7 +294,9 @@ class MusicPlayerManager @Inject constructor(
     }
 
     fun stop() {
-        mediaController?.stop()
+        if (ensureConnected()) {
+            mediaController?.stop()
+        }
         _currentSong.value = null
         _playlist.value = emptyList()
         _currentIndex.value = 0
@@ -232,7 +308,9 @@ class MusicPlayerManager @Inject constructor(
     }
 
     fun clearQueue() {
-        mediaController?.clearMediaItems()
+        if (ensureConnected()) {
+            mediaController?.clearMediaItems()
+        }
         _currentSong.value = null
         _playlist.value = emptyList()
         _currentIndex.value = 0
@@ -242,6 +320,7 @@ class MusicPlayerManager @Inject constructor(
 
     fun release() {
         positionUpdateJob?.cancel()
+        connectionRetryJob?.cancel()
         scope.cancel()
         mediaController?.release()
         controllerFuture?.let { future ->

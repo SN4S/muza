@@ -37,10 +37,22 @@ class MusicPlayerService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
-
         initializePlayer()
         initializeMediaSession()
         setupNotificationChannel()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
+        return START_STICKY // Keep service alive
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        // Stop service when app is removed from recents
+//        if (!player.isPlaying) {
+            stopSelf()
+//        }
     }
 
     private fun initializePlayer() {
