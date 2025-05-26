@@ -12,6 +12,7 @@ import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.sn4s.muza.data.model.Song
+import com.sn4s.muza.di.NetworkModule
 import com.sn4s.muza.service.MusicPlayerService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
@@ -173,17 +174,17 @@ class MusicPlayerManager @Inject constructor(
         }
     }
 
-    fun playSong(song: Song, baseUrl: String = "http://192.168.88.188:8000") {
+    fun playSong(song: Song) {
         if (!ensureConnected()) {
             // Schedule for when connected
             scope.launch {
                 delay(1000)
-                playSong(song, baseUrl)
+                playSong(song)
             }
             return
         }
 
-        val streamUrl = "$baseUrl/songs/${song.id}/stream"
+        val streamUrl = "${NetworkModule.BASE_URL}songs/${song.id}/stream"
         val mediaItem = MediaItem.Builder()
             .setMediaId(song.id.toString())
             .setUri(streamUrl)
@@ -211,18 +212,18 @@ class MusicPlayerManager @Inject constructor(
         _currentIndex.value = 0
     }
 
-    fun playPlaylist(songs: List<Song>, startIndex: Int = 0, baseUrl: String = "http://192.168.88.188:8000") {
+    fun playPlaylist(songs: List<Song>, startIndex: Int = 0) {
         if (!ensureConnected()) {
             // Schedule for when connected
             scope.launch {
                 delay(1000)
-                playPlaylist(songs, startIndex, baseUrl)
+                playPlaylist(songs, startIndex)
             }
             return
         }
 
         val mediaItems = songs.map { song ->
-            val streamUrl = "$baseUrl/songs/${song.id}/stream"
+            val streamUrl = "${NetworkModule.BASE_URL}songs/${song.id}/stream"
             MediaItem.Builder()
                 .setMediaId(song.id.toString())
                 .setUri(streamUrl)

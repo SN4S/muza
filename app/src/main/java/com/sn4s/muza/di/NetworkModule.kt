@@ -25,6 +25,8 @@ import okhttp3.Authenticator
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
+    const val BASE_URL = "http://192.168.88.188:8000/"
+
     private val _unauthorizedEvent = MutableSharedFlow<Unit>()
     val unauthorizedEvent: SharedFlow<Unit> = _unauthorizedEvent
 
@@ -45,7 +47,7 @@ object NetworkModule {
                 // Create a simple client for refresh call
                 val refreshClient = OkHttpClient.Builder().build()
                 val refreshRetrofit = Retrofit.Builder()
-                    .baseUrl("http://192.168.88.188:8000/")
+                    .baseUrl(BASE_URL)
                     .client(refreshClient)
                     .addConverterFactory(GsonConverterFactory.create())
                     .build()
@@ -100,7 +102,7 @@ object NetworkModule {
     @Singleton
     fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
         return Retrofit.Builder()
-            .baseUrl("http://192.168.88.188:8000/")
+            .baseUrl(BASE_URL)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
