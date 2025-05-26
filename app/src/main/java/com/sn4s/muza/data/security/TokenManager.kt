@@ -30,8 +30,9 @@ class TokenManager @Inject constructor(
             Log.d("TokenManager", "Saving token: ${token.tokenType} ${token.accessToken}")
             sharedPreferences.edit().apply {
                 putString(KEY_ACCESS_TOKEN, token.accessToken)
+                putString(KEY_REFRESH_TOKEN, token.refreshToken)
                 putString(KEY_TOKEN_TYPE, token.tokenType)
-                commit() // Use commit() instead of apply() to ensure immediate write
+                commit()
             }
             Log.d("TokenManager", "Token saved successfully")
         } catch (e: Exception) {
@@ -42,11 +43,11 @@ class TokenManager @Inject constructor(
     fun getToken(): Token? {
         try {
             val accessToken = sharedPreferences.getString(KEY_ACCESS_TOKEN, null)
+            val refreshToken = sharedPreferences.getString(KEY_REFRESH_TOKEN, null)
             val tokenType = sharedPreferences.getString(KEY_TOKEN_TYPE, null)
-            
-            return if (accessToken != null && tokenType != null) {
-                Log.d("TokenManager", "Retrieved token: $tokenType $accessToken")
-                Token(accessToken, tokenType)
+
+            return if (accessToken != null && refreshToken != null && tokenType != null) {
+                Token(accessToken, refreshToken, tokenType)
             } else {
                 Log.d("TokenManager", "No token found in storage")
                 null
@@ -67,8 +68,9 @@ class TokenManager @Inject constructor(
         }
     }
 
-    companion object {
+    private companion object {
         private const val KEY_ACCESS_TOKEN = "access_token"
+        private const val KEY_REFRESH_TOKEN = "refresh_token"
         private const val KEY_TOKEN_TYPE = "token_type"
     }
 } 

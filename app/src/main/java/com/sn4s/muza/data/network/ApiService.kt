@@ -17,6 +17,9 @@ interface ApiService {
         @Field("password") password: String
     ): Token
 
+    @POST("auth/refresh")
+    suspend fun refreshToken(@Body request: RefreshTokenRequest): Token
+
     @GET("users/me")
     suspend fun getCurrentUser(): User
 
