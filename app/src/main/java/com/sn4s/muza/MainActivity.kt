@@ -98,6 +98,16 @@ fun MainScreen() {
                 PlaylistDetailScreenWithPlayer(navController, playlistId, playerViewModel)
             }
 
+            composable("album/{albumId}") { backStackEntry ->
+                val albumId = backStackEntry.arguments?.getString("albumId")?.toIntOrNull() ?: 0
+                AlbumDetailScreenWithPlayer(navController, albumId, playerViewModel)
+            }
+
+            composable("artist/{artistId}") { backStackEntry ->
+                val artistId = backStackEntry.arguments?.getString("artistId")?.toIntOrNull() ?: 0
+                ArtistProfileScreenWithPlayer(navController, artistId, playerViewModel)
+            }
+
             composable("home") {
                 HomeScreenWithPlayer(navController, playerViewModel)
             }
@@ -124,6 +134,8 @@ fun MainScreen() {
                     playerViewModel = playerViewModel
                 )
             }
+
+
         }
     }
 }
@@ -138,6 +150,44 @@ fun HomeScreenWithPlayer(
             modifier = androidx.compose.ui.Modifier.weight(1f)
         ) {
             HomeScreen(navController, playerViewModel = playerViewModel)
+        }
+        MiniPlayer(
+            onClick = { navController.navigate("player") },
+            viewModel = playerViewModel
+        )
+    }
+}
+
+@Composable
+fun ArtistProfileScreenWithPlayer(
+    navController: androidx.navigation.NavController,
+    artistId: Int,
+    playerViewModel: PlayerViewModel
+) {
+    androidx.compose.foundation.layout.Column {
+        androidx.compose.foundation.layout.Box(
+            modifier = androidx.compose.ui.Modifier.weight(1f)
+        ) {
+            ArtistProfileScreen(navController, artistId, playerViewModel)
+        }
+        MiniPlayer(
+            onClick = { navController.navigate("player") },
+            viewModel = playerViewModel
+        )
+    }
+}
+
+@Composable
+fun AlbumDetailScreenWithPlayer(
+    navController: androidx.navigation.NavController,
+    albumId: Int,
+    playerViewModel: PlayerViewModel
+) {
+    androidx.compose.foundation.layout.Column {
+        androidx.compose.foundation.layout.Box(
+            modifier = androidx.compose.ui.Modifier.weight(1f)
+        ) {
+            AlbumDetailScreen(navController, albumId, playerViewModel)
         }
         MiniPlayer(
             onClick = { navController.navigate("player") },

@@ -61,8 +61,10 @@ class MusicRepository @Inject constructor(
     }
 
     fun getUserSongs(skip: Int = 0, limit: Int = 100): Flow<List<Song>> = flow {
-        emit(apiService.getUserSongs(skip, limit))
+        emit(apiService.getCurrentUserSongs(skip, limit))  // For current user
     }
+
+
 
     suspend fun uploadSong(
         title: RequestBody,
@@ -116,7 +118,7 @@ class MusicRepository @Inject constructor(
     }
 
     fun getUserAlbums(skip: Int = 0, limit: Int = 100): Flow<List<Album>> = flow {
-        emit(apiService.getUserAlbums(skip, limit))
+        emit(apiService.getCurrentUserAlbums(skip, limit))  // For current user
     }
 
     suspend fun createAlbum(album: AlbumCreate): Album {
@@ -153,7 +155,7 @@ class MusicRepository @Inject constructor(
     }
 
     fun getUserPlaylists(skip: Int = 0, limit: Int = 100): Flow<List<Playlist>> = flow {
-        emit(apiService.getUserPlaylists(skip, limit))
+        emit(apiService.getCurrentUserPlaylists(skip, limit))
     }
 
     suspend fun createPlaylist(playlist: PlaylistCreate): Playlist {
@@ -224,12 +226,12 @@ class MusicRepository @Inject constructor(
         return apiService.getUser(userId)
     }
 
-    fun getUserSongs(userId: Int, skip: Int = 0, limit: Int = 100): Flow<List<Song>> = flow {
-        emit(apiService.getUserSongs(userId, skip, limit))
+    fun getPublicUserSongs(userId: Int, skip: Int = 0, limit: Int = 100): Flow<List<Song>> = flow {
+        emit(apiService.getUserSongs(userId, skip, limit))  // For other users
     }
 
-    fun getUserAlbums(userId: Int, skip: Int = 0, limit: Int = 100): Flow<List<Album>> = flow {
-        emit(apiService.getUserAlbums(userId, skip, limit))
+    fun getPublicUserAlbums(userId: Int, skip: Int = 0, limit: Int = 100): Flow<List<Album>> = flow {
+        emit(apiService.getUserAlbums(userId, skip, limit))  // For other users
     }
 
     suspend fun logout() {

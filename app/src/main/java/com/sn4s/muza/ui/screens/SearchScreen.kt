@@ -108,7 +108,7 @@ fun SearchScreen(
                             .fillMaxWidth()
                             .padding(vertical = 4.dp)
                             .clickable {
-                                // TODO: Navigate to artist profile
+                                navController.navigate("artist/${artist.id}")
                             }
                     ) {
                         Row(
@@ -150,7 +150,7 @@ fun SearchScreen(
                             .fillMaxWidth()
                             .padding(vertical = 4.dp)
                             .clickable {
-                                // TODO: Navigate to album details or play album
+                                navController.navigate("album/${album.id}")
                             }
                     ) {
                         Row(

@@ -81,7 +81,7 @@ fun HomeScreen(
                             .width(160.dp)
                             .padding(vertical = 4.dp)
                             .clickable {
-                                // TODO: Navigate to album details
+                                navController.navigate("album/${album.id}")
                             }
                     ) {
                         Column(

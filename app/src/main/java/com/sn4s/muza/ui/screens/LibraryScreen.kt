@@ -213,7 +213,7 @@ fun LibraryScreen(
                         .fillMaxWidth()
                         .padding(vertical = 4.dp)
                         .clickable {
-                            // TODO: Navigate to album details
+                            navController.navigate("album/${album.id}")
                         }
                 ) {
                     Row(

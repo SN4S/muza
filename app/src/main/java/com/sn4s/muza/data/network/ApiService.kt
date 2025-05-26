@@ -113,21 +113,21 @@ interface ApiService {
         @Query("limit") limit: Int = 20
     ): List<Genre>
 
-    // User content
+    // Current user content
     @GET("users/me/songs")
-    suspend fun getUserSongs(
+    suspend fun getCurrentUserSongs(
         @Query("skip") skip: Int = 0,
         @Query("limit") limit: Int = 100
     ): List<Song>
 
     @GET("users/me/playlists")
-    suspend fun getUserPlaylists(
+    suspend fun getCurrentUserPlaylists(
         @Query("skip") skip: Int = 0,
         @Query("limit") limit: Int = 100
     ): List<Playlist>
 
     @GET("users/me/albums")
-    suspend fun getUserAlbums(
+    suspend fun getCurrentUserAlbums(
         @Query("skip") skip: Int = 0,
         @Query("limit") limit: Int = 100
     ): List<Album>
