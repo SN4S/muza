@@ -4,9 +4,6 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sn4s.muza.data.model.Playlist
-import com.sn4s.muza.data.model.Song
-import com.sn4s.muza.data.model.SongNested
-import com.sn4s.muza.data.model.UserNested
 import com.sn4s.muza.data.repository.MusicRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -74,29 +71,6 @@ class PlaylistDetailViewModel @Inject constructor(
             } finally {
                 _isLoading.value = false
             }
-        }
-    }
-
-    // Helper function to convert SongNested to Song
-    // You might need to adjust this based on your actual models
-    fun getSongFromNested(songNested: SongNested): Song? {
-        return try {
-            // This is a simplified conversion - you might need to fetch more data
-            // or adjust based on your actual model structure
-            Song(
-                id = songNested.id,
-                title = songNested.title,
-                duration = songNested.duration,
-                filePath = songNested.filePath,
-                albumId = null, // SongNested doesn't have albumId
-                creatorId = 0, // You'll need to get this somehow
-                createdAt = songNested.createdAt,
-                creator = songNested.creator,
-                likeCount = songNested.likeCount
-            )
-        } catch (e: Exception) {
-            Log.e("PlaylistDetailViewModel", "Failed to convert SongNested to Song", e)
-            null
         }
     }
 

@@ -14,7 +14,7 @@ data class User(
     val isActive: Boolean,
     @SerializedName("created_at")
     val createdAt: String,
-    val songs: List<SongNested> = emptyList(),
+    val songs: List<Song> = emptyList(),
     val albums: List<AlbumNested> = emptyList()
 )
 
@@ -27,6 +27,7 @@ data class UserNested(
     val isArtist: Boolean
 )
 
+// Main Song model - use everywhere
 data class Song(
     val id: Int,
     val title: String,
@@ -36,7 +37,7 @@ data class Song(
     @SerializedName("album_id")
     val albumId: Int? = null,
     @SerializedName("creator_id")
-    val creatorId: Int,
+    val creatorId: Int = 0,
     @SerializedName("created_at")
     val createdAt: String,
     val creator: UserNested,
@@ -49,18 +50,8 @@ data class LikeResponse(
     val isLiked: Boolean
 )
 
-data class SongNested(
-    val id: Int,
-    val title: String,
-    val duration: Int,
-    @SerializedName("file_path")
-    val filePath: String,
-    @SerializedName("created_at")
-    val createdAt: String,
-    @SerializedName("like_count")
-    val likeCount: Int,
-    val creator: UserNested
-)
+// Keep SongNested for backward compatibility but make it an alias
+typealias SongNested = Song
 
 data class Album(
     val id: Int,
@@ -73,7 +64,7 @@ data class Album(
     val creatorId: Int,
     @SerializedName("created_at")
     val createdAt: String,
-    val songs: List<SongNested> = emptyList(),
+    val songs: List<Song> = emptyList(),
     val creator: UserNested
 )
 
@@ -105,6 +96,7 @@ data class GenreCreate(
     val name: String,
     val description: String? = null
 )
+
 data class Playlist(
     val id: Int,
     val name: String,
@@ -113,14 +105,14 @@ data class Playlist(
     val ownerId: Int,
     @SerializedName("created_at")
     val createdAt: String,
-    val songs: List<SongNested> = emptyList()
+    val songs: List<Song> = emptyList()
 )
 
 data class Genre(
     val id: Int,
     val name: String,
     val description: String? = null,
-    val songs: List<SongNested> = emptyList()
+    val songs: List<Song> = emptyList()
 )
 
 data class Token(
@@ -160,4 +152,4 @@ data class UserBase(
     val image: String? = null,
     @SerializedName("is_artist")
     val isArtist: Boolean = false
-) 
+)

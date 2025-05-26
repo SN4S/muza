@@ -127,12 +127,7 @@ fun PlaylistDetailScreen(
                                     ) {
                                         Button(
                                             onClick = {
-                                                val songs = playlist!!.songs.map { songNested ->
-                                                    // Convert SongNested to Song - you might need to adjust this
-                                                    // based on your actual data models
-                                                    viewModel.getSongFromNested(songNested)
-                                                }.filterNotNull()
-                                                playerViewModel.playPlaylist(songs)
+                                                playerViewModel.playPlaylist(playlist!!.songs)
                                             }
                                         ) {
                                             Icon(
@@ -145,11 +140,8 @@ fun PlaylistDetailScreen(
                                         }
                                         OutlinedButton(
                                             onClick = {
-                                                val songs = playlist!!.songs.map { songNested ->
-                                                    viewModel.getSongFromNested(songNested)
-                                                }.filterNotNull()
                                                 // Shuffle and play
-                                                playerViewModel.playPlaylist(songs.shuffled())
+                                                playerViewModel.playPlaylist(playlist!!.songs.shuffled())
                                             }
                                         ) {
                                             Icon(
@@ -199,38 +191,34 @@ fun PlaylistDetailScreen(
                             }
                         }
                     } else {
-                        itemsIndexed(playlist!!.songs) { index, songNested ->
-                            // You'll need to convert SongNested to Song or modify SongItem
-                            val song = viewModel.getSongFromNested(songNested)
-                            if (song != null) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "${index + 1}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.width(32.dp)
+                        itemsIndexed(playlist!!.songs) { index, song ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "${index + 1}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.width(32.dp)
+                                )
+                                Box(modifier = Modifier.weight(1f)) {
+                                    SongItem(
+                                        song = song,
+                                        playerViewModel = playerViewModel,
+                                        modifier = Modifier.padding(vertical = 4.dp)
                                     )
-                                    Box(modifier = Modifier.weight(1f)) {
-                                        SongItem(
-                                            song = song,
-                                            playerViewModel = playerViewModel,
-                                            modifier = Modifier.padding(vertical = 4.dp)
-                                        )
+                                }
+                                IconButton(
+                                    onClick = {
+                                        viewModel.removeSongFromPlaylist(playlist!!.id, song.id)
                                     }
-                                    IconButton(
-                                        onClick = {
-                                            viewModel.removeSongFromPlaylist(playlist!!.id, song.id)
-                                        }
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Remove,
-                                            contentDescription = "Remove from playlist",
-                                            tint = MaterialTheme.colorScheme.error
-                                        )
-                                    }
+                                ) {
+                                    Icon(
+                                        Icons.Default.Remove,
+                                        contentDescription = "Remove from playlist",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
                                 }
                             }
                         }

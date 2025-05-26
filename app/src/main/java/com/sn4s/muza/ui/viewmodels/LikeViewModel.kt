@@ -20,6 +20,33 @@ class LikeViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
+    // Keep track of checked songs to avoid duplicate API calls
+    private val _checkedSongs = mutableSetOf<Int>()
+
+    init {
+        // Load initial liked songs
+        loadLikedSongs()
+    }
+
+    private fun loadLikedSongs() {
+        viewModelScope.launch {
+            try {
+                repository.getLikedSongs()
+                    .catch { e ->
+                        Log.e("LikeViewModel", "Failed to load liked songs", e)
+                    }
+                    .collect { songs ->
+                        val likedIds = songs.map { it.id }.toSet()
+                        _likedSongs.value = likedIds
+                        _checkedSongs.addAll(likedIds)
+                        Log.d("LikeViewModel", "Loaded ${likedIds.size} liked songs")
+                    }
+            } catch (e: Exception) {
+                Log.e("LikeViewModel", "Error loading liked songs", e)
+            }
+        }
+    }
+
     fun toggleLike(songId: Int) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -35,6 +62,8 @@ class LikeViewModel @Inject constructor(
                     _likedSongs.value = _likedSongs.value + songId
                     Log.d("LikeViewModel", "Liked song: $songId")
                 }
+
+                _checkedSongs.add(songId)
             } catch (e: Exception) {
                 Log.e("LikeViewModel", "Failed to toggle like for song: $songId", e)
             } finally {
@@ -44,6 +73,11 @@ class LikeViewModel @Inject constructor(
     }
 
     fun checkIfLiked(songId: Int) {
+        // Don't check if we already know the status
+        if (_checkedSongs.contains(songId)) {
+            return
+        }
+
         viewModelScope.launch {
             try {
                 val isLiked = repository.isSongLiked(songId)
@@ -52,6 +86,8 @@ class LikeViewModel @Inject constructor(
                 } else {
                     _likedSongs.value = _likedSongs.value - songId
                 }
+                _checkedSongs.add(songId)
+                Log.d("LikeViewModel", "Checked like status for song $songId: $isLiked")
             } catch (e: Exception) {
                 Log.e("LikeViewModel", "Failed to check like status for song: $songId", e)
             }
@@ -60,5 +96,10 @@ class LikeViewModel @Inject constructor(
 
     fun isLiked(songId: Int): Boolean {
         return _likedSongs.value.contains(songId)
+    }
+
+    fun refreshLikedSongs() {
+        _checkedSongs.clear()
+        loadLikedSongs()
     }
 }

@@ -27,11 +27,13 @@ fun SongItem(
     likeViewModel: LikeViewModel = hiltViewModel(),
     modifier: Modifier = Modifier
 ) {
-    val isLiked by remember { derivedStateOf { likeViewModel.isLiked(song.id) } }
+    val likedSongs by likeViewModel.likedSongs.collectAsState()
+    val isLiked = likedSongs.contains(song.id)
     val isLikeLoading by likeViewModel.isLoading.collectAsState()
 
     var showAddToPlaylistDialog by remember { mutableStateOf(false) }
 
+    // Always check like status when song changes
     LaunchedEffect(song.id) {
         likeViewModel.checkIfLiked(song.id)
     }
