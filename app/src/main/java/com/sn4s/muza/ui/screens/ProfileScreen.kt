@@ -164,22 +164,27 @@ private fun ProfileHeaderCard(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Avatar
-            Card(
+            Box(
                 modifier = Modifier.size(120.dp),
-                shape = CircleShape,
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
+                contentAlignment = Alignment.Center
             ) {
-                Box(
+                Card(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = user.username.take(2).uppercase(),
-                        style = MaterialTheme.typography.headlineLarge,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    shape = CircleShape,
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
                     )
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = user.username.take(2).uppercase(),
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
                 }
             }
 
@@ -290,50 +295,50 @@ private fun ProfileHeaderCard(
                 }
             } else {
                 // Display Mode
-                Text(
-                    text = user.username,
-                    style = MaterialTheme.typography.headlineMedium
-                )
-
-                if (user.isArtist) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    AssistChip(
-                        onClick = { },
-                        label = { Text("Artist") },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Star,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = user.username,
+                        style = MaterialTheme.typography.headlineMedium,
+                        textAlign = TextAlign.Center
                     )
-                }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                    if (user.isArtist) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        AssistChip(
+                            onClick = { },
+                            label = { Text("Artist") },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Star,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        )
+                    }
 
-                Text(
-                    text = user.email,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                if (!user.bio.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(12.dp))
+
                     Text(
-                        text = user.bio!!,
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = user.email,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
                     )
-                } else if (!user.isArtist) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Add a bio to tell others about yourself",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline,
-                        fontStyle = FontStyle.Italic
-                    )
+
+                    if (!user.bio.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = user.bio!!,
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
         }
@@ -346,7 +351,9 @@ private fun ArtistStatsCard(user: User) {
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(20.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
         ) {
             Text(
                 text = "Your Music",
@@ -355,23 +362,30 @@ private fun ArtistStatsCard(user: User) {
             )
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 StatItem(
                     count = user.songs.size,
                     label = "Songs",
-                    icon = Icons.Default.MusicNote
+                    icon = Icons.Default.MusicNote,
+                    modifier = Modifier.weight(1f)
                 )
+
                 StatItem(
                     count = user.albums.size,
                     label = "Albums",
-                    icon = Icons.Default.Album
+                    icon = Icons.Default.Album,
+                    modifier = Modifier.weight(1f)
                 )
+
                 StatItem(
                     count = user.songs.sumOf { it.likeCount },
                     label = "Total Likes",
-                    icon = Icons.Default.Favorite
+                    icon = Icons.Default.Favorite,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
@@ -382,27 +396,31 @@ private fun ArtistStatsCard(user: User) {
 private fun StatItem(
     count: Int,
     label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier
 ) {
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(28.dp)
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = count.toString(),
-            style = MaterialTheme.typography.headlineSmall,
+            style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.primary
         )
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
         )
     }
 }
