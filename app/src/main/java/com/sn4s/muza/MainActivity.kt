@@ -114,10 +114,6 @@ fun MainScreen() {
                 ArtistScreenWithPlayer(navController,playerViewModel)
             }
 
-            composable("upload") {
-                UploadScreen(navController)
-            }
-
             composable("profile") {
                 ProfileScreen(navController)
             }
