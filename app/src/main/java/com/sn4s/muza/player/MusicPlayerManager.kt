@@ -52,17 +52,22 @@ class MusicPlayerManager @Inject constructor(
     private val _currentIndex = MutableStateFlow(0)
     val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
 
+    private var serviceStarted = false
+
     init {
-        startService()
         initializeController()
     }
 
-    private fun startService() {
-        val intent = Intent(context, MusicPlayerService::class.java)
-        context.startForegroundService(intent)
+    private fun ensureServiceStarted() {
+        if (!serviceStarted) {
+            val intent = Intent(context, MusicPlayerService::class.java)
+            context.startForegroundService(intent)
+            serviceStarted = true
+        }
     }
 
     private fun initializeController() {
+        ensureServiceStarted()
         connectionRetryJob?.cancel()
 
         val sessionToken = SessionToken(
