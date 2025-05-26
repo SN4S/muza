@@ -30,6 +30,9 @@ fun PlaylistDetailScreen(
     val playlist by viewModel.playlist.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
+    var showEditDialog by remember { mutableStateOf(false) }
+    var editName by remember { mutableStateOf("") }
+    var editDescription by remember { mutableStateOf("") }
 
     LaunchedEffect(playlistId) {
         viewModel.loadPlaylist(playlistId)
@@ -48,7 +51,11 @@ fun PlaylistDetailScreen(
             },
             actions = {
                 if (playlist != null) {
-                    IconButton(onClick = { /* TODO: Edit playlist */ }) {
+                    IconButton(onClick = {
+                        editName = playlist!!.name
+                        editDescription = playlist!!.description ?: ""
+                        showEditDialog = true
+                    }) {
                         Icon(Icons.Default.Edit, contentDescription = "Edit")
                     }
                     IconButton(onClick = { viewModel.deletePlaylist(playlist!!.id) }) {
@@ -226,6 +233,51 @@ fun PlaylistDetailScreen(
                 }
             }
         }
+    }
+
+    if (showEditDialog) {
+        AlertDialog(
+            onDismissRequest = { showEditDialog = false },
+            title = { Text("Edit Playlist") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = editName,
+                        onValueChange = { editName = it },
+                        label = { Text("Playlist Name") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = editDescription,
+                        onValueChange = { editDescription = it },
+                        label = { Text("Description (Optional)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 3
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.updatePlaylist(
+                            playlist!!.id,
+                            editName,
+                            editDescription.takeIf { it.isNotBlank() }
+                        )
+                        showEditDialog = false
+                    },
+                    enabled = editName.isNotBlank()
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     // Handle playlist deletion - navigate back if deleted

@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sn4s.muza.data.model.Playlist
+import com.sn4s.muza.data.model.PlaylistCreate
 import com.sn4s.muza.data.repository.MusicRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -68,6 +69,25 @@ class PlaylistDetailViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e("PlaylistDetailViewModel", "Failed to delete playlist", e)
                 _error.value = e.message ?: "Failed to delete playlist"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun updatePlaylist(playlistId: Int, name: String, description: String?) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                val playlistUpdate = PlaylistCreate(name = name, description = description)
+                repository.updatePlaylist(playlistId, playlistUpdate)
+                // Reload playlist to show changes
+                loadPlaylist(playlistId)
+                Log.d("PlaylistDetailViewModel", "Updated playlist $playlistId")
+            } catch (e: Exception) {
+                Log.e("PlaylistDetailViewModel", "Failed to update playlist", e)
+                _error.value = e.message ?: "Failed to update playlist"
             } finally {
                 _isLoading.value = false
             }
