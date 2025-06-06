@@ -18,13 +18,15 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.sn4s.muza.di.NetworkModule
 import com.sn4s.muza.ui.viewmodels.HomeViewModel
 import com.sn4s.muza.ui.components.SongItem
+import com.sn4s.muza.ui.viewmodels.LikeViewModel
 import com.sn4s.muza.ui.viewmodels.PlayerViewModel
 
 @Composable
 fun HomeScreen(
     navController: NavController,
     viewModel: HomeViewModel = hiltViewModel(),
-    playerViewModel: PlayerViewModel? = null
+    playerViewModel: PlayerViewModel? = null,
+    likeViewModel: LikeViewModel = hiltViewModel()
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -40,6 +42,12 @@ fun HomeScreen(
 
     val songs by viewModel.songs.collectAsState()
     val albums by viewModel.albums.collectAsState()
+
+    LaunchedEffect(songs) {
+        if (songs.isNotEmpty()) {
+            likeViewModel.checkMultipleLikes(songs.map { it.id })
+        }
+    }
 
     LazyColumn(
         modifier = Modifier

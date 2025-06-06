@@ -34,9 +34,9 @@ fun SongItem(
     var showAddToPlaylistDialog by remember { mutableStateOf(false) }
 
     // Always check like status when song changes
-    LaunchedEffect(song.id) {
-        likeViewModel.checkIfLiked(song.id)
-    }
+//    LaunchedEffect(song.id) {
+//        likeViewModel.checkIfLiked(song.id)
+//    }
 
     Card(
         modifier = modifier.fillMaxWidth()

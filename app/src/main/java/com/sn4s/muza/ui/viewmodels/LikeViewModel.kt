@@ -94,6 +94,23 @@ class LikeViewModel @Inject constructor(
         }
     }
 
+    fun checkMultipleLikes(songIds: List<Int>) {
+        val uncheckedIds = songIds.filter { !_checkedSongs.contains(it) }
+        if (uncheckedIds.isEmpty()) return
+
+        viewModelScope.launch {
+            try {
+                // Call new bulk endpoint (you'll need to add this to backend)
+                val likeStatuses = repository.checkMultipleLikes(uncheckedIds)
+                val newLikedIds = likeStatuses.filter { it.value }.keys
+                _likedSongs.value = _likedSongs.value + newLikedIds
+                _checkedSongs.addAll(uncheckedIds)
+            } catch (e: Exception) {
+                Log.e("LikeViewModel", "Failed to check multiple likes", e)
+            }
+        }
+    }
+
     fun isLiked(songId: Int): Boolean {
         return _likedSongs.value.contains(songId)
     }

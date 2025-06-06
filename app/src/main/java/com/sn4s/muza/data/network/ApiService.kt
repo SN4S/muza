@@ -259,4 +259,7 @@ interface ApiService {
         @Query("skip") skip: Int = 0,
         @Query("limit") limit: Int = 100
     ): List<Song>
+
+    @POST("songs/check-likes")
+    suspend fun checkMultipleLikes(@Body songIds: List<Int>): Map<Int, Boolean>
 }

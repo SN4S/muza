@@ -36,7 +36,7 @@ object NetworkModule {
         return Authenticator { _, response ->
             val token = tokenManager.getToken()
             if (token?.refreshToken == null) {
-                // No refresh token, can't authenticate
+                // No refresh token, no auth
                 CoroutineScope(Dispatchers.Main).launch {
                     _unauthorizedEvent.emit(Unit)
                 }

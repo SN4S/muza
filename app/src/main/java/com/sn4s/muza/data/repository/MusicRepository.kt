@@ -196,6 +196,10 @@ class MusicRepository @Inject constructor(
         return apiService.isSongLiked(songId).isLiked
     }
 
+    suspend fun checkMultipleLikes(songIds: List<Int>): Map<Int, Boolean> {
+        return apiService.checkMultipleLikes(songIds)
+    }
+
     // Genres
     fun getGenres(skip: Int = 0, limit: Int = 100): Flow<List<Genre>> = flow {
         emit(apiService.getGenres(skip, limit))
