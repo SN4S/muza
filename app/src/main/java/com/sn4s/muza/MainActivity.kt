@@ -16,7 +16,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.sn4s.muza.di.NetworkModule
 import com.sn4s.muza.ui.components.BottomNavBar
 import com.sn4s.muza.ui.components.MiniPlayer
 import com.sn4s.muza.ui.screens.*
@@ -135,6 +134,10 @@ fun MainScreen() {
                 )
             }
 
+            composable("queue") {
+                QueueScreenWithPlayer(navController, playerViewModel)
+            }
+
             composable("liked_songs") {
                 LikedSongsScreenWithPlayer(navController, playerViewModel)
             }
@@ -153,6 +156,24 @@ fun HomeScreenWithPlayer(
             modifier = androidx.compose.ui.Modifier.weight(1f)
         ) {
             HomeScreen(navController, playerViewModel = playerViewModel)
+        }
+        MiniPlayer(
+            onClick = { navController.navigate("player") },
+            viewModel = playerViewModel
+        )
+    }
+}
+
+@Composable
+fun QueueScreenWithPlayer(
+    navController: androidx.navigation.NavController,
+    playerViewModel: PlayerViewModel
+) {
+    androidx.compose.foundation.layout.Column {
+        androidx.compose.foundation.layout.Box(
+            modifier = androidx.compose.ui.Modifier.weight(1f)
+        ) {
+            QueueScreen(navController)
         }
         MiniPlayer(
             onClick = { navController.navigate("player") },

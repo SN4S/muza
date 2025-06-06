@@ -1,7 +1,6 @@
 package com.sn4s.muza.ui.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -14,7 +13,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.sn4s.muza.ui.viewmodels.PlayerViewModel
-import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,6 +57,14 @@ fun FullPlayerScreen(
                 text = "Now Playing",
                 style = MaterialTheme.typography.titleMedium
             )
+
+            // In your actions row, add this button:
+            IconButton(onClick = { navController.navigate("queue") }) {
+                Icon(
+                    imageVector = Icons.Default.QueueMusic,
+                    contentDescription = "Queue"
+                )
+            }
 
             IconButton(onClick = { /* TODO: More options */ }) {
                 Icon(
