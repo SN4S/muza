@@ -202,7 +202,16 @@ class MusicPlayerManager @Inject constructor(
                     }
                 }
                 updateDuration()
-                saveQueueState()
+                // Only save state on actual transitions, not when adding to queue
+                if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO ||
+                    reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK) {
+                    saveQueueState()
+                }
+            }
+
+            override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
+                // Update queue size when timeline changes due to additions/removals
+                Log.d("MusicPlayerManager", "Timeline changed: ${timeline.windowCount} items")
             }
 
             override fun onPositionDiscontinuity(
@@ -265,17 +274,54 @@ class MusicPlayerManager @Inject constructor(
             .build()
     }
 
-    private fun updateMediaController() {
-        val currentQueue = _queue.value
-        if (currentQueue.isEmpty()) return
+    // Separate methods for different queue operations to prevent playback restart
+    private fun setNewQueue(songs: List<Song>, startIndex: Int = 0) {
+        if (songs.isEmpty()) return
 
-        val mediaItems = currentQueue.map { song ->
-            createMediaItem(song)
-        }
+        val mediaItems = songs.map { song -> createMediaItem(song) }
 
         mediaController?.let { controller ->
-            controller.setMediaItems(mediaItems, _queueIndex.value, 0)
+            controller.setMediaItems(mediaItems, startIndex, 0)
             controller.prepare()
+        }
+
+        saveQueueState()
+        Log.d("MusicPlayerManager", "Set new queue with ${songs.size} songs, starting at $startIndex")
+    }
+
+    private fun addMediaItemsToQueue(songs: List<Song>, insertIndex: Int) {
+        if (songs.isEmpty()) return
+
+        val mediaItems = songs.map { song -> createMediaItem(song) }
+
+        mediaController?.let { controller ->
+            // Ensure insert index is valid
+            val actualIndex = insertIndex.coerceAtMost(controller.mediaItemCount)
+            controller.addMediaItems(actualIndex, mediaItems)
+            Log.d("MusicPlayerManager", "Added ${songs.size} media items at index $actualIndex")
+        }
+
+        saveQueueState()
+    }
+
+    private fun removeMediaItemFromQueue(index: Int) {
+        mediaController?.let { controller ->
+            if (index in 0 until controller.mediaItemCount) {
+                controller.removeMediaItem(index)
+                Log.d("MusicPlayerManager", "Removed media item at index $index")
+            }
+        }
+
+        saveQueueState()
+    }
+
+    private fun moveMediaItemInQueue(fromIndex: Int, toIndex: Int) {
+        mediaController?.let { controller ->
+            if (fromIndex in 0 until controller.mediaItemCount &&
+                toIndex in 0 until controller.mediaItemCount) {
+                controller.moveMediaItem(fromIndex, toIndex)
+                Log.d("MusicPlayerManager", "Moved media item from $fromIndex to $toIndex")
+            }
         }
 
         saveQueueState()
@@ -296,7 +342,8 @@ class MusicPlayerManager @Inject constructor(
         _queue.value = currentQueue
 
         if (ensureConnected()) {
-            updateMediaController()
+            // Only add the new items, don't replace entire queue
+            addMediaItemsToQueue(songs, insertIndex)
         }
 
         Log.d("MusicPlayerManager", "Added ${songs.size} songs to queue at index $insertIndex")
@@ -308,6 +355,11 @@ class MusicPlayerManager @Inject constructor(
 
         val removedSong = currentQueue.removeAt(index)
         _queue.value = currentQueue
+
+        // Remove from MediaController first
+        if (ensureConnected()) {
+            removeMediaItemFromQueue(index)
+        }
 
         // Adjust current index if needed
         when {
@@ -327,10 +379,6 @@ class MusicPlayerManager @Inject constructor(
             }
         }
 
-        if (ensureConnected()) {
-            updateMediaController()
-        }
-
         Log.d("MusicPlayerManager", "Removed song: ${removedSong.title} from queue")
     }
 
@@ -342,16 +390,17 @@ class MusicPlayerManager @Inject constructor(
         currentQueue.add(toIndex, song)
         _queue.value = currentQueue
 
+        // Move in MediaController
+        if (ensureConnected()) {
+            moveMediaItemInQueue(fromIndex, toIndex)
+        }
+
         // Update current index if it was affected
         _queueIndex.value = when {
             fromIndex == _queueIndex.value -> toIndex
             fromIndex < _queueIndex.value && toIndex >= _queueIndex.value -> _queueIndex.value - 1
             fromIndex > _queueIndex.value && toIndex <= _queueIndex.value -> _queueIndex.value + 1
             else -> _queueIndex.value
-        }
-
-        if (ensureConnected()) {
-            updateMediaController()
         }
 
         Log.d("MusicPlayerManager", "Moved song from $fromIndex to $toIndex")
@@ -388,7 +437,7 @@ class MusicPlayerManager @Inject constructor(
         _queueIndex.value = 0
         _currentSong.value = song
 
-        updateMediaController()
+        setNewQueue(listOf(song), 0)
         mediaController?.play()
 
         Log.d("MusicPlayerManager", "Playing single song: ${song.title}")
@@ -410,7 +459,7 @@ class MusicPlayerManager @Inject constructor(
         _queueIndex.value = startIndex.coerceAtMost(songs.size - 1)
         _currentSong.value = songs.getOrNull(_queueIndex.value)
 
-        updateMediaController()
+        setNewQueue(songs, startIndex)
         mediaController?.play()
 
         Log.d("MusicPlayerManager", "Playing playlist with ${songs.size} songs, starting at $startIndex")
