@@ -1,5 +1,3 @@
-// REPLACE YOUR EXISTING app/src/main/java/com/sn4s/muza/ui/screens/ArtistProfileScreen.kt
-
 package com.sn4s.muza.ui.screens
 
 import androidx.compose.foundation.layout.*
@@ -134,28 +132,100 @@ fun ArtistProfileScreen(
                         }
                     }
 
-                    // Albums section (if any)
-                    if (artistAlbums.isNotEmpty()) {
+                    // Content Tabs (Songs/Albums for artists)
+                    if (artist!!.isArtist && (artistSongs.isNotEmpty() || artistAlbums.isNotEmpty())) {
                         item {
-                            Text(
-                                text = "Albums",
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        // You can add album items here if you want
-                    }
+                            var selectedTab by remember { mutableIntStateOf(0) }
+                            val tabs = listOf("Songs", "Albums")
 
-                    // Songs section
-                    if (artistSongs.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = "Songs",
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                            Column {
+                                TabRow(selectedTabIndex = selectedTab) {
+                                    tabs.forEachIndexed { index, title ->
+                                        Tab(
+                                            selected = selectedTab == index,
+                                            onClick = { selectedTab = index },
+                                            text = { Text(title) }
+                                        )
+                                    }
+                                }
 
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                when (selectedTab) {
+                                    0 -> {
+                                        // Songs content
+                                        if (artistSongs.isNotEmpty()) {
+                                            Column {
+                                                artistSongs.forEach { song ->
+                                                    SongItem(
+                                                        song = song,
+                                                        onPlayClick = {
+                                                            playerViewModel?.playSong(song)
+                                                        }
+                                                    )
+                                                    Spacer(modifier = Modifier.height(8.dp))
+                                                }
+                                            }
+                                        } else {
+                                            Text(
+                                                "No songs yet",
+                                                modifier = Modifier.padding(16.dp),
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+                                    }
+                                    1 -> {
+                                        // Albums content
+                                        if (artistAlbums.isNotEmpty()) {
+                                            Column {
+                                                artistAlbums.forEach { album ->
+                                                    Card(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .padding(vertical = 4.dp),
+                                                        onClick = { navController.navigate("album/${album.id}") }
+                                                    ) {
+                                                        Row(
+                                                            modifier = Modifier.padding(16.dp),
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            Icon(
+                                                                Icons.Default.Album,
+                                                                contentDescription = null,
+                                                                modifier = Modifier.size(48.dp)
+                                                            )
+                                                            Spacer(modifier = Modifier.width(16.dp))
+                                                            Column {
+                                                                Text(
+                                                                    text = album.title,
+                                                                    style = MaterialTheme.typography.titleMedium
+                                                                )
+                                                                Text(
+                                                                    text = "${album.songs.size} songs",
+                                                                    style = MaterialTheme.typography.bodyMedium,
+                                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                    Spacer(modifier = Modifier.height(8.dp))
+                                                }
+                                            }
+                                        } else {
+                                            Text(
+                                                "No albums yet",
+                                                modifier = Modifier.padding(16.dp),
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else if (artistSongs.isNotEmpty()) {
+                        // Non-artist with songs - just show songs list
                         items(artistSongs) { song ->
                             SongItem(
                                 song = song,
@@ -164,29 +234,14 @@ fun ArtistProfileScreen(
                                 }
                             )
                         }
-                    } else if (!isLoading) {
+                    } else {
                         item {
-                            Card(
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(24.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Icon(
-                                        Icons.Default.MusicNote,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(48.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    Text(
-                                        text = if (artist!!.isArtist) "No songs yet" else "This user hasn't uploaded any songs",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
+                            Text(
+                                "No content available",
+                                modifier = Modifier.padding(16.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
                         }
                     }
                 }
@@ -210,28 +265,24 @@ fun EnhancedProfileCard(
             modifier = Modifier.padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Avatar (matches your existing ProfileScreen style)
-            Box(
+            // Avatar
+            Card(
                 modifier = Modifier.size(120.dp),
-                contentAlignment = Alignment.Center
+                shape = CircleShape,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             ) {
-                Card(
+                Box(
                     modifier = Modifier.fillMaxSize(),
-                    shape = CircleShape,
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = profile.username.take(2).uppercase(),
-                            style = MaterialTheme.typography.headlineLarge,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Avatar",
+                        modifier = Modifier.size(60.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 
@@ -325,6 +376,7 @@ fun BasicProfileCard(artist: UserNested) {
             // Avatar
             Card(
                 modifier = Modifier.size(120.dp),
+                shape = CircleShape,
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant
                 )

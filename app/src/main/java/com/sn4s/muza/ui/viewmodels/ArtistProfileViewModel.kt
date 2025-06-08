@@ -1,5 +1,3 @@
-// REPLACE YOUR EXISTING app/src/main/java/com/sn4s/muza/ui/viewmodels/ArtistProfileViewModel.kt
-
 package com.sn4s.muza.ui.viewmodels
 
 import android.util.Log
