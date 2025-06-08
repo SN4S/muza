@@ -242,4 +242,28 @@ class MusicRepository @Inject constructor(
         playerManager.stop()
         tokenManager.clearToken()
     }
+
+    suspend fun followUser(userId: Int): FollowResponse {
+        return apiService.followUser(userId)
+    }
+
+    suspend fun unfollowUser(userId: Int): FollowResponse {
+        return apiService.unfollowUser(userId)
+    }
+
+    suspend fun getFollowStatus(userId: Int): FollowResponse {
+        return apiService.getFollowStatus(userId)
+    }
+
+    suspend fun getUserProfile(userId: Int): UserProfile {
+        return apiService.getUserProfile(userId)
+    }
+
+    fun getMyFollowing(skip: Int = 0, limit: Int = 50): Flow<List<UserProfile>> = flow {
+        emit(apiService.getMyFollowing(skip, limit))
+    }
+
+    fun getMyFollowers(skip: Int = 0, limit: Int = 50): Flow<List<UserProfile>> = flow {
+        emit(apiService.getMyFollowers(skip, limit))
+    }
 }

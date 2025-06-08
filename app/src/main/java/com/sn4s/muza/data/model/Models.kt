@@ -27,6 +27,32 @@ data class UserNested(
     val isArtist: Boolean
 )
 
+data class FollowResponse(
+    @SerializedName("is_following")
+    val isFollowing: Boolean,
+    @SerializedName("follower_count")
+    val followerCount: Int,
+    @SerializedName("following_count")
+    val followingCount: Int
+)
+
+data class UserProfile(
+    val id: Int,
+    val username: String,
+    val bio: String? = null,
+    val image: String? = null,
+    @SerializedName("is_artist")
+    val isArtist: Boolean,
+    @SerializedName("follower_count")
+    val followerCount: Int = 0,
+    @SerializedName("following_count")
+    val followingCount: Int = 0,
+    @SerializedName("song_count")
+    val songCount: Int = 0,
+    @SerializedName("is_following")
+    val isFollowing: Boolean? = null
+)
+
 // Main Song model - use everywhere
 data class Song(
     val id: Int,
