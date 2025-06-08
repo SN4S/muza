@@ -263,27 +263,27 @@ interface ApiService {
     @POST("songs/check-likes")
     suspend fun checkMultipleLikes(@Body songIds: List<Int>): Map<Int, Boolean>
 
-    @POST("follow/{user_id}")
+    @POST("users/follow/{user_id}")
     suspend fun followUser(@Path("user_id") userId: Int): FollowResponse
 
-    @DELETE("follow/{user_id}")
+    @DELETE("users/follow/{user_id}")
     suspend fun unfollowUser(@Path("user_id") userId: Int): FollowResponse
 
-    @GET("follow/{user_id}/status")
+    @GET("users/follow/{user_id}/status")
     suspend fun getFollowStatus(@Path("user_id") userId: Int): FollowResponse
 
-    @GET("follow/following")
+    @GET("users/following")
     suspend fun getMyFollowing(
         @Query("skip") skip: Int = 0,
         @Query("limit") limit: Int = 50
     ): List<UserProfile>
 
-    @GET("follow/followers")
+    @GET("users/followers")
     suspend fun getMyFollowers(
         @Query("skip") skip: Int = 0,
         @Query("limit") limit: Int = 50
     ): List<UserProfile>
 
-    @GET("follow/{user_id}/profile")
+    @GET("users/{user_id}/profile")
     suspend fun getUserProfile(@Path("user_id") userId: Int): UserProfile
 }
