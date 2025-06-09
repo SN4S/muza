@@ -19,15 +19,16 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.sn4s.muza.data.model.Song
 import com.sn4s.muza.di.NetworkModule
-import com.sn4s.muza.ui.components.SongItem
+import com.sn4s.muza.ui.components.USongItem
 import com.sn4s.muza.ui.viewmodels.LibraryViewModel
+import com.sn4s.muza.ui.viewmodels.PlayerController
 import com.sn4s.muza.ui.viewmodels.PlayerViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LikedSongsScreen(
     navController: NavController,
-    playerViewModel: PlayerViewModel? = null,
+    playerViewModel: PlayerController = hiltViewModel(),
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -293,7 +294,7 @@ private fun LikedSongsHeader(
 private fun SongItemWithIndex(
     song: Song,
     index: Int,
-    playerViewModel: PlayerViewModel?,
+    playerViewModel: PlayerController = hiltViewModel(),
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -313,9 +314,8 @@ private fun SongItemWithIndex(
 
         // Song item
         Box(modifier = Modifier.weight(1f)) {
-            SongItem(
+            USongItem(
                 song = song,
-                playerViewModel = playerViewModel
             )
         }
     }

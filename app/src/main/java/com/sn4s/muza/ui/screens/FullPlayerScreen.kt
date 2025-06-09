@@ -7,32 +7,41 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.sn4s.muza.ui.viewmodels.PlayerViewModel
+import com.sn4s.muza.player.MusicPlayerManager
+import com.sn4s.muza.ui.viewmodels.PlayerController
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FullPlayerScreen(
     navController: NavController,
-    playerViewModel: PlayerViewModel
+    playerController: PlayerController = hiltViewModel()
 ) {
-    val currentSong by playerViewModel.currentSong.collectAsState()
-    val isPlaying by playerViewModel.isPlaying.collectAsState()
-    val currentPosition by playerViewModel.currentPosition.collectAsState()
-    val duration by playerViewModel.duration.collectAsState()
-    val playlist by playerViewModel.playlist.collectAsState()
-    val currentIndex by playerViewModel.currentIndex.collectAsState()
+    val currentSong by playerController.currentSong.collectAsStateWithLifecycle()
+    val isPlaying by playerController.isPlaying.collectAsStateWithLifecycle()
+    val currentPosition by playerController.currentPosition.collectAsStateWithLifecycle()
+    val duration by playerController.duration.collectAsStateWithLifecycle()
+    val queue by playerController.queue.collectAsStateWithLifecycle()
+    val queueIndex by playerController.queueIndex.collectAsStateWithLifecycle()
+    val isShuffled by playerController.isShuffled.collectAsStateWithLifecycle()
+    val repeatMode by playerController.repeatMode.collectAsStateWithLifecycle()
 
+    // Auto-close if no song is playing
     if (currentSong == null) {
         LaunchedEffect(Unit) {
             navController.popBackStack()
         }
         return
     }
+
+    // Seek state for smooth dragging
+    var isDragging by remember { mutableStateOf(false) }
+    var dragPosition by remember { mutableStateOf(0f) }
 
     Column(
         modifier = Modifier
@@ -58,94 +67,60 @@ fun FullPlayerScreen(
                 style = MaterialTheme.typography.titleMedium
             )
 
-            // In your actions row, add this button:
             IconButton(onClick = { navController.navigate("queue") }) {
                 Icon(
                     imageVector = Icons.Default.QueueMusic,
                     contentDescription = "Queue"
                 )
             }
-
-            IconButton(onClick = { /* TODO: More options */ }) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "More"
-                )
-            }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.weight(1f))
 
-        // Album Art Placeholder
-        Card(
-            modifier = Modifier
-                .size(300.dp)
-                .clip(MaterialTheme.shapes.large),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+        // Song info
+        currentSong?.let { song ->
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(horizontal = 32.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.MusicNote,
-                    contentDescription = "Album Art",
-                    modifier = Modifier.size(120.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                Text(
+                    text = song.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = song.creator.username,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(48.dp))
 
-        // Song Info
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(
-                text = currentSong!!.title,
-                style = MaterialTheme.typography.headlineSmall,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = currentSong!!.creator.username,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Progress Bar
-        Column(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            var isDragging by remember { mutableStateOf(false) }
-            var dragPosition by remember { mutableStateOf(0f) }
-
-            val sliderPosition = if (isDragging) {
-                dragPosition
-            } else {
-                if (duration > 0) currentPosition.toFloat() / duration.toFloat() else 0f
-            }
+        // Progress bar
+        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+            val progress = if (duration > 0) {
+                if (isDragging) dragPosition else (currentPosition.toFloat() / duration.toFloat())
+            } else 0f
 
             Slider(
-                value = sliderPosition,
-                onValueChange = { progress ->
+                value = progress,
+                onValueChange = { newValue ->
                     isDragging = true
-                    dragPosition = progress
+                    dragPosition = newValue
                 },
                 onValueChangeFinished = {
-                    val newPosition = (dragPosition * duration).toLong()
-                    playerViewModel.seekTo(newPosition)
                     isDragging = false
+                    playerController.seekTo((dragPosition * duration).toLong())
                 },
                 modifier = Modifier.fillMaxWidth()
             )
@@ -169,15 +144,15 @@ fun FullPlayerScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Controls
+        // Main controls
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
-                onClick = { playerViewModel.skipToPrevious() },
-                enabled = playlist.size > 1
+                onClick = { playerController.skipToPrevious() },
+                enabled = queue.size > 1
             ) {
                 Icon(
                     imageVector = Icons.Default.SkipPrevious,
@@ -187,7 +162,7 @@ fun FullPlayerScreen(
             }
 
             FloatingActionButton(
-                onClick = { playerViewModel.togglePlayPause() },
+                onClick = { playerController.togglePlayPause() },
                 modifier = Modifier.size(64.dp)
             ) {
                 Icon(
@@ -198,8 +173,8 @@ fun FullPlayerScreen(
             }
 
             IconButton(
-                onClick = { playerViewModel.skipToNext() },
-                enabled = playlist.size > 1
+                onClick = { playerController.skipToNext() },
+                enabled = queue.size > 1
             ) {
                 Icon(
                     imageVector = Icons.Default.SkipNext,
@@ -211,15 +186,53 @@ fun FullPlayerScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // Secondary controls
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = { playerController.toggleShuffle() }) {
+                Icon(
+                    imageVector = Icons.Default.Shuffle,
+                    contentDescription = "Shuffle",
+                    tint = if (isShuffled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            IconButton(onClick = { playerController.toggleRepeatMode() }) {
+                Icon(
+                    imageVector = when (repeatMode) {
+                        MusicPlayerManager.RepeatMode.ONE -> Icons.Default.RepeatOne
+                        else -> Icons.Default.Repeat
+                    },
+                    contentDescription = when (repeatMode) {
+                        MusicPlayerManager.RepeatMode.OFF -> "Repeat off"
+                        MusicPlayerManager.RepeatMode.ONE -> "Repeat one"
+                        MusicPlayerManager.RepeatMode.ALL -> "Repeat all"
+                    },
+                    tint = if (repeatMode != MusicPlayerManager.RepeatMode.OFF) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         // Queue info
-        if (playlist.size > 1) {
+        if (queue.size > 1) {
             Text(
-                text = "Playing from playlist (${currentIndex + 1} of ${playlist.size})",
+                text = "Playing from queue (${queueIndex + 1} of ${queue.size})",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
         }
+
+        Spacer(modifier = Modifier.weight(1f))
     }
 }
 

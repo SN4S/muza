@@ -13,8 +13,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.sn4s.muza.ui.components.SongItem
+import com.sn4s.muza.ui.components.USongItem
 import com.sn4s.muza.ui.viewmodels.AlbumDetailViewModel
+import com.sn4s.muza.ui.viewmodels.PlayerController
 import com.sn4s.muza.ui.viewmodels.PlayerViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -24,7 +25,7 @@ import java.util.*
 fun AlbumDetailScreen(
     navController: NavController,
     albumId: Int,
-    playerViewModel: PlayerViewModel? = null,
+    playerViewModel: PlayerController? = null,
     viewModel: AlbumDetailViewModel = hiltViewModel()
 ) {
     val album by viewModel.album.collectAsState()
@@ -247,9 +248,8 @@ fun AlbumDetailScreen(
                                     modifier = Modifier.width(32.dp)
                                 )
                                 Box(modifier = Modifier.weight(1f)) {
-                                    SongItem(
+                                    USongItem(
                                         song = song,
-                                        playerViewModel = playerViewModel,
                                         modifier = Modifier.padding(vertical = 4.dp)
                                     )
                                 }

@@ -17,15 +17,16 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.sn4s.muza.di.NetworkModule
 import com.sn4s.muza.ui.viewmodels.HomeViewModel
-import com.sn4s.muza.ui.components.SongItem
+import com.sn4s.muza.ui.components.USongItem
 import com.sn4s.muza.ui.viewmodels.LikeViewModel
+import com.sn4s.muza.ui.viewmodels.PlayerController
 import com.sn4s.muza.ui.viewmodels.PlayerViewModel
 
 @Composable
 fun HomeScreen(
     navController: NavController,
     viewModel: HomeViewModel = hiltViewModel(),
-    playerViewModel: PlayerViewModel? = null,
+    playerViewModel: PlayerController = hiltViewModel(),
     likeViewModel: LikeViewModel = hiltViewModel()
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -63,9 +64,8 @@ fun HomeScreen(
         }
 
         items(songs) { song ->
-            SongItem(
+            USongItem(
                 song = song,
-                playerViewModel = playerViewModel,
                 modifier = Modifier.padding(vertical = 4.dp)
             )
         }

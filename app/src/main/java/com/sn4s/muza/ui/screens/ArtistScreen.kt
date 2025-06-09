@@ -22,15 +22,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.sn4s.muza.di.NetworkModule
-import com.sn4s.muza.ui.components.SongItem
 import com.sn4s.muza.ui.viewmodels.ArtistViewModel
+import com.sn4s.muza.ui.viewmodels.PlayerController
 import com.sn4s.muza.ui.viewmodels.PlayerViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArtistScreen(
     navController: NavController,
-    playerViewModel: PlayerViewModel? = null,
+    playerViewModel: PlayerController = hiltViewModel(),
     viewModel: ArtistViewModel = hiltViewModel()
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -147,7 +147,7 @@ private fun SongsTab(
     songs: List<com.sn4s.muza.data.model.Song>,
     isLoading: Boolean,
     onDeleteSong: (Int) -> Unit,
-    playerViewModel: PlayerViewModel?
+    playerViewModel: PlayerController = hiltViewModel()
 ) {
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
@@ -262,7 +262,7 @@ private fun AlbumsTab(
     isLoading: Boolean,
     onDeleteAlbum: (Int) -> Unit,
     onCreateAlbum: (String) -> Unit,
-    playerViewModel: PlayerViewModel?
+    playerViewModel: PlayerController = hiltViewModel()
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
 

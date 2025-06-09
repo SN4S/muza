@@ -18,9 +18,10 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.sn4s.muza.data.model.*
 import com.sn4s.muza.di.NetworkModule
-import com.sn4s.muza.ui.components.SongItem
+import com.sn4s.muza.ui.components.USongItem
 import com.sn4s.muza.ui.components.UserAvatar
 import com.sn4s.muza.ui.viewmodels.ArtistProfileViewModel
+import com.sn4s.muza.ui.viewmodels.PlayerController
 import com.sn4s.muza.ui.viewmodels.PlayerViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,7 +29,7 @@ import com.sn4s.muza.ui.viewmodels.PlayerViewModel
 fun ArtistProfileScreen(
     navController: NavController,
     artistId: Int,
-    playerViewModel: PlayerViewModel? = null,
+    playerViewModel: PlayerController? = null,
     viewModel: ArtistProfileViewModel = hiltViewModel()
 ) {
     // Handle unauthorized like your other screens
@@ -158,11 +159,8 @@ fun ArtistProfileScreen(
                                         if (artistSongs.isNotEmpty()) {
                                             Column {
                                                 artistSongs.forEach { song ->
-                                                    SongItem(
+                                                    USongItem(
                                                         song = song,
-                                                        onPlayClick = {
-                                                            playerViewModel?.playSong(song)
-                                                        }
                                                     )
                                                     Spacer(modifier = Modifier.height(8.dp))
                                                 }
@@ -228,11 +226,8 @@ fun ArtistProfileScreen(
                     } else if (artistSongs.isNotEmpty()) {
                         // Non-artist with songs - just show songs list
                         items(artistSongs) { song ->
-                            SongItem(
-                                song = song,
-                                onPlayClick = {
-                                    playerViewModel?.playSong(song)
-                                }
+                            USongItem(
+                                song = song
                             )
                         }
                     } else {

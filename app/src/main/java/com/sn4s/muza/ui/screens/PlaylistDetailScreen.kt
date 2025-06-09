@@ -15,7 +15,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.sn4s.muza.data.model.Playlist
-import com.sn4s.muza.ui.components.SongItem
+import com.sn4s.muza.ui.components.USongItem
+import com.sn4s.muza.ui.viewmodels.PlayerController
 import com.sn4s.muza.ui.viewmodels.PlaylistDetailViewModel
 import com.sn4s.muza.ui.viewmodels.PlayerViewModel
 
@@ -24,7 +25,7 @@ import com.sn4s.muza.ui.viewmodels.PlayerViewModel
 fun PlaylistDetailScreen(
     navController: NavController,
     playlistId: Int,
-    playerViewModel: PlayerViewModel? = null,
+    playerViewModel: PlayerController = hiltViewModel(),
     viewModel: PlaylistDetailViewModel = hiltViewModel()
 ) {
     val playlist by viewModel.playlist.collectAsState()
@@ -210,9 +211,8 @@ fun PlaylistDetailScreen(
                                     modifier = Modifier.width(32.dp)
                                 )
                                 Box(modifier = Modifier.weight(1f)) {
-                                    SongItem(
+                                    USongItem(
                                         song = song,
-                                        playerViewModel = playerViewModel,
                                         modifier = Modifier.padding(vertical = 4.dp)
                                     )
                                 }

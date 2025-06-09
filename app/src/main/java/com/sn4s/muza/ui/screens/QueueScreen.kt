@@ -22,13 +22,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.sn4s.muza.data.model.Song
 import com.sn4s.muza.player.MusicPlayerManager
-import com.sn4s.muza.ui.viewmodels.QueueViewModel
+import com.sn4s.muza.ui.viewmodels.PlayerController
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QueueScreen(
     navController: NavController,
-    viewModel: QueueViewModel = hiltViewModel()
+    viewModel: PlayerController = hiltViewModel()
 ) {
     val queue by viewModel.queue.collectAsState()
     val queueIndex by viewModel.queueIndex.collectAsState()
@@ -248,7 +248,7 @@ private fun QueueEmptyState() {
 
 @Composable
 private fun QueueHeader(
-    queueStats: QueueViewModel.QueueStats,
+    queueStats: PlayerController.QueueStats,
     isShuffled: Boolean,
     repeatMode: MusicPlayerManager.RepeatMode,
     onShuffleToggle: () -> Unit,

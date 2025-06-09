@@ -22,6 +22,7 @@ import com.sn4s.muza.data.model.Song
 import com.sn4s.muza.di.NetworkModule
 import com.sn4s.muza.ui.components.CreatePlaylistDialog
 import com.sn4s.muza.ui.viewmodels.LibraryViewModel
+import com.sn4s.muza.ui.viewmodels.PlayerController
 import com.sn4s.muza.ui.viewmodels.PlaylistViewModel
 import com.sn4s.muza.ui.viewmodels.PlayerViewModel
 
@@ -31,7 +32,7 @@ fun LibraryScreen(
     navController: NavController,
     viewModel: LibraryViewModel = hiltViewModel(),
     playlistViewModel: PlaylistViewModel = hiltViewModel(),
-    playerViewModel: PlayerViewModel? = null
+    playerViewModel: PlayerController = hiltViewModel()
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -257,7 +258,7 @@ private fun LibraryHeader(
 @Composable
 private fun QuickAccessSection(
     likedSongs: List<Song>,
-    playerViewModel: PlayerViewModel?,
+    playerViewModel: PlayerController = hiltViewModel(),
     navController: NavController,
 ) {
     Column {

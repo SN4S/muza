@@ -164,6 +164,8 @@ class PlayerController @Inject constructor(
         playerManager.seekToIndex(index)
     }
 
+    fun playFromQueue(index: Int) = seekToIndex(index)
+
     // === Mode Controls ===
 
     fun toggleShuffle() = executeWithErrorHandling("toggle shuffle") {

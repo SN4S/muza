@@ -21,9 +21,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.sn4s.muza.data.model.Album
 import com.sn4s.muza.data.model.User
 import com.sn4s.muza.di.NetworkModule
-import com.sn4s.muza.ui.components.SongItem
+import com.sn4s.muza.ui.components.USongItem
 import com.sn4s.muza.ui.components.UserAvatar
-import com.sn4s.muza.ui.viewmodels.PlayerViewModel
+import com.sn4s.muza.ui.viewmodels.PlayerController
 import com.sn4s.muza.ui.viewmodels.SearchViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,7 +31,7 @@ import com.sn4s.muza.ui.viewmodels.SearchViewModel
 fun SearchScreen(
     navController: NavController,
     viewModel: SearchViewModel = hiltViewModel(),
-    playerViewModel: PlayerViewModel? = null
+    playerViewModel: PlayerController = hiltViewModel()
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -153,7 +153,7 @@ private fun SearchResults(
     artists: List<User>,
     albums: List<Album>,
     selectedFilter: SearchFilter,
-    playerViewModel: PlayerViewModel?,
+    playerViewModel: PlayerController = hiltViewModel(),
     navController: NavController
 ) {
     LazyColumn(
@@ -168,11 +168,8 @@ private fun SearchResults(
                         SearchSectionHeader("Songs", songs.size)
                     }
                     items(songs.take(3)) { song ->
-                        SongItem(
-                            song = song,
-                            onPlayClick = {
-                                playerViewModel?.playSong(song)
-                            }
+                        USongItem(
+                            song = song
                         )
                     }
                     if (songs.size > 3) {
@@ -253,11 +250,8 @@ private fun SearchResults(
                         )
                     }
                     items(songs) { song ->
-                        SongItem(
+                        USongItem(
                             song = song,
-                            onPlayClick = {
-                                playerViewModel?.playSong(song)
-                            }
                         )
                     }
                 } else {

@@ -14,13 +14,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.sn4s.muza.ui.viewmodels.PlayerController
 import com.sn4s.muza.ui.viewmodels.PlayerViewModel
 
 @Composable
 fun MiniPlayer(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
-    viewModel: PlayerViewModel = hiltViewModel()
+    viewModel: PlayerController = hiltViewModel()
 ) {
     val currentSong by viewModel.currentSong.collectAsState()
     val isPlaying by viewModel.isPlaying.collectAsState()

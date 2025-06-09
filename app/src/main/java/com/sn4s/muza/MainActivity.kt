@@ -21,7 +21,7 @@ import com.sn4s.muza.ui.components.MiniPlayer
 import com.sn4s.muza.ui.screens.*
 import com.sn4s.muza.ui.theme.MuzaTheme
 import com.sn4s.muza.ui.viewmodels.AuthViewModel
-import com.sn4s.muza.ui.viewmodels.PlayerViewModel
+import com.sn4s.muza.ui.viewmodels.PlayerController
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -46,7 +46,7 @@ class MainActivity : ComponentActivity() {
 fun MainScreen() {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = hiltViewModel()
-    val playerViewModel: PlayerViewModel = hiltViewModel()
+    val playerViewModel: PlayerController = hiltViewModel()
 
     val isAuthenticated by authViewModel.isAuthenticated.collectAsStateWithLifecycle()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -94,33 +94,33 @@ fun MainScreen() {
 
             composable("playlist/{playlistId}") { backStackEntry ->
                 val playlistId = backStackEntry.arguments?.getString("playlistId")?.toIntOrNull() ?: 0
-                PlaylistDetailScreenWithPlayer(navController, playlistId, playerViewModel)
+                PlaylistDetailScreenWithPlayer(navController, playlistId)
             }
 
             composable("album/{albumId}") { backStackEntry ->
                 val albumId = backStackEntry.arguments?.getString("albumId")?.toIntOrNull() ?: 0
-                AlbumDetailScreenWithPlayer(navController, albumId, playerViewModel)
+                AlbumDetailScreenWithPlayer(navController, albumId)
             }
 
             composable("artist/{artistId}") { backStackEntry ->
                 val artistId = backStackEntry.arguments?.getString("artistId")?.toIntOrNull() ?: 0
-                ArtistProfileScreenWithPlayer(navController, artistId, playerViewModel)
+                ArtistProfileScreenWithPlayer(navController, artistId)
             }
 
             composable("home") {
-                HomeScreenWithPlayer(navController, playerViewModel)
+                HomeScreenWithPlayer(navController)
             }
 
             composable("search") {
-                SearchScreenWithPlayer(navController, playerViewModel)
+                SearchScreenWithPlayer(navController)
             }
 
             composable("library") {
-                LibraryScreenWithPlayer(navController, playerViewModel)
+                LibraryScreenWithPlayer(navController)
             }
 
             composable("artist") {
-                ArtistScreenWithPlayer(navController,playerViewModel)
+                ArtistScreenWithPlayer(navController)
             }
 
             composable("profile") {
@@ -129,17 +129,16 @@ fun MainScreen() {
 
             composable("player") {
                 FullPlayerScreen(
-                    navController = navController,
-                    playerViewModel = playerViewModel
+                    navController = navController
                 )
             }
 
             composable("queue") {
-                QueueScreenWithPlayer(navController, playerViewModel)
+                QueueScreenWithPlayer(navController)
             }
 
             composable("liked_songs") {
-                LikedSongsScreenWithPlayer(navController, playerViewModel)
+                LikedSongsScreenWithPlayer(navController)
             }
 
         }
@@ -149,7 +148,7 @@ fun MainScreen() {
 @Composable
 fun HomeScreenWithPlayer(
     navController: androidx.navigation.NavController,
-    playerViewModel: PlayerViewModel
+    playerViewModel: PlayerController = hiltViewModel()
 ) {
     androidx.compose.foundation.layout.Column {
         androidx.compose.foundation.layout.Box(
@@ -167,7 +166,7 @@ fun HomeScreenWithPlayer(
 @Composable
 fun QueueScreenWithPlayer(
     navController: androidx.navigation.NavController,
-    playerViewModel: PlayerViewModel
+    playerViewModel: PlayerController = hiltViewModel()
 ) {
     androidx.compose.foundation.layout.Column {
         androidx.compose.foundation.layout.Box(
@@ -185,7 +184,7 @@ fun QueueScreenWithPlayer(
 @Composable
 fun LikedSongsScreenWithPlayer(
     navController: androidx.navigation.NavController,
-    playerViewModel: PlayerViewModel
+    playerViewModel: PlayerController = hiltViewModel()
 ) {
     androidx.compose.foundation.layout.Column {
         androidx.compose.foundation.layout.Box(
@@ -204,7 +203,7 @@ fun LikedSongsScreenWithPlayer(
 fun ArtistProfileScreenWithPlayer(
     navController: androidx.navigation.NavController,
     artistId: Int,
-    playerViewModel: PlayerViewModel
+    playerViewModel: PlayerController = hiltViewModel()
 ) {
     androidx.compose.foundation.layout.Column {
         androidx.compose.foundation.layout.Box(
@@ -223,7 +222,7 @@ fun ArtistProfileScreenWithPlayer(
 fun AlbumDetailScreenWithPlayer(
     navController: androidx.navigation.NavController,
     albumId: Int,
-    playerViewModel: PlayerViewModel
+    playerViewModel: PlayerController = hiltViewModel()
 ) {
     androidx.compose.foundation.layout.Column {
         androidx.compose.foundation.layout.Box(
@@ -242,7 +241,7 @@ fun AlbumDetailScreenWithPlayer(
 fun PlaylistDetailScreenWithPlayer(
     navController: androidx.navigation.NavController,
     playlistId: Int,
-    playerViewModel: PlayerViewModel
+    playerViewModel: PlayerController = hiltViewModel()
 ) {
     androidx.compose.foundation.layout.Column {
         androidx.compose.foundation.layout.Box(
@@ -260,7 +259,7 @@ fun PlaylistDetailScreenWithPlayer(
 @Composable
 fun SearchScreenWithPlayer(
     navController: androidx.navigation.NavController,
-    playerViewModel: PlayerViewModel
+    playerViewModel: PlayerController = hiltViewModel()
 ) {
     androidx.compose.foundation.layout.Column {
         androidx.compose.foundation.layout.Box(
@@ -278,7 +277,7 @@ fun SearchScreenWithPlayer(
 @Composable
 fun LibraryScreenWithPlayer(
     navController: androidx.navigation.NavController,
-    playerViewModel: PlayerViewModel
+    playerViewModel: PlayerController = hiltViewModel()
 ) {
     androidx.compose.foundation.layout.Column {
         androidx.compose.foundation.layout.Box(
@@ -296,7 +295,7 @@ fun LibraryScreenWithPlayer(
 @Composable
 fun ArtistScreenWithPlayer(
     navController: androidx.navigation.NavController,
-    playerViewModel: PlayerViewModel
+    playerViewModel: PlayerController = hiltViewModel()
 ) {
     androidx.compose.foundation.layout.Column {
         androidx.compose.foundation.layout.Box(
