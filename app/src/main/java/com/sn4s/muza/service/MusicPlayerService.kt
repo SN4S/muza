@@ -11,6 +11,9 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionCommands
+import androidx.media3.session.SessionResult
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -41,6 +44,29 @@ class MusicPlayerService : MediaLibraryService() {
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
 
+        // Add player error handling
+        player.addListener(object : Player.Listener {
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                android.util.Log.e("MusicPlayerService", "Player error: ${error.message}", error)
+                // Attempt recovery
+                if (player.playbackState == Player.STATE_IDLE) {
+                    player.prepare()
+                }
+            }
+
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                when (playbackState) {
+                    Player.STATE_ENDED -> {
+                        // Handle playback completion
+                        android.util.Log.d("MusicPlayerService", "Playback ended")
+                    }
+                    Player.STATE_BUFFERING -> {
+                        android.util.Log.d("MusicPlayerService", "Buffering...")
+                    }
+                }
+            }
+        })
+
         val sessionActivityPendingIntent = PendingIntent.getActivity(
             this,
             0,
@@ -50,33 +76,141 @@ class MusicPlayerService : MediaLibraryService() {
 
         mediaLibrarySession = MediaLibrarySession.Builder(this, player, MediaLibrarySessionCallback())
             .setSessionActivity(sessionActivityPendingIntent)
+            .setId("MuzaPlayerSession") // Consistent session ID for restoration
             .build()
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? =
         mediaLibrarySession
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        // Handle task removal gracefully
+        val player = mediaLibrarySession?.player
+        if (player?.playWhenReady != true || player.mediaItemCount == 0) {
+            // Stop service if not playing
+            stopSelf()
+        }
+        super.onTaskRemoved(rootIntent)
+    }
+
     override fun onDestroy() {
-        mediaLibrarySession?.run {
-            player.release()
-            release()
-            mediaLibrarySession = null
+        try {
+            mediaLibrarySession?.run {
+                // Save session state before destroying
+                saveSessionState()
+
+                // Properly release resources
+                player.release()
+                release()
+                mediaLibrarySession = null
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MusicPlayerService", "Error during destroy", e)
         }
         super.onDestroy()
     }
 
+    private fun saveSessionState() {
+        // Save current queue and position for restoration
+        val player = mediaLibrarySession?.player ?: return
+
+        try {
+            val prefs = getSharedPreferences("player_session", MODE_PRIVATE)
+            prefs.edit()
+                .putLong("position", player.currentPosition)
+                .putInt("media_item_index", player.currentMediaItemIndex)
+                .putBoolean("play_when_ready", player.playWhenReady)
+                .apply()
+        } catch (e: Exception) {
+            android.util.Log.e("MusicPlayerService", "Failed to save session state", e)
+        }
+    }
+
+    private fun restoreSessionState() {
+        val player = mediaLibrarySession?.player ?: return
+
+        try {
+            val prefs = getSharedPreferences("player_session", MODE_PRIVATE)
+            val position = prefs.getLong("position", 0L)
+            val mediaItemIndex = prefs.getInt("media_item_index", 0)
+            val playWhenReady = prefs.getBoolean("play_when_ready", false)
+
+            if (player.mediaItemCount > 0 && mediaItemIndex < player.mediaItemCount) {
+                player.seekTo(mediaItemIndex, position)
+                player.playWhenReady = playWhenReady
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MusicPlayerService", "Failed to restore session state", e)
+        }
+    }
+
     private inner class MediaLibrarySessionCallback : MediaLibrarySession.Callback {
+
+        override fun onConnect(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo
+        ): MediaSession.ConnectionResult {
+            // Grant all available commands for full functionality
+            val sessionCommands = androidx.media3.session.SessionCommands.Builder().build()
+            val playerCommands = Player.Commands.Builder()
+                .addAllCommands()  // This grants all available player commands
+                .build()
+
+            return MediaSession.ConnectionResult.accept(sessionCommands, playerCommands)
+        }
+
+        override fun onPostConnect(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo
+        ) {
+            // Restore session state when controller connects
+            restoreSessionState()
+        }
 
         override fun onAddMediaItems(
             mediaSession: MediaSession,
             controller: MediaSession.ControllerInfo,
             mediaItems: MutableList<MediaItem>
         ): ListenableFuture<MutableList<MediaItem>> {
-            // Media items are already properly constructed by MusicPlayerManager
-            return Futures.immediateFuture(mediaItems)
+            // Validate and process media items
+            val processedItems = mediaItems.mapNotNull { mediaItem ->
+                try {
+                    // Ensure valid URI and metadata
+                    if (mediaItem.localConfiguration?.uri != null || mediaItem.requestMetadata.mediaUri != null) {
+                        mediaItem
+                    } else {
+                        android.util.Log.w("MusicPlayerService", "Invalid media item: ${mediaItem.mediaId}")
+                        null
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("MusicPlayerService", "Error processing media item", e)
+                    null
+                }
+            }.toMutableList()
+
+            return Futures.immediateFuture(processedItems)
         }
 
-        // Library methods for browse functionality (optional)
+        override fun onCustomCommand(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            customCommand: SessionCommand,
+            args: Bundle
+        ): ListenableFuture<SessionResult> {
+            return when (customCommand.customAction) {
+                "SAVE_SESSION" -> {
+                    saveSessionState()
+                    Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                }
+                "RESTORE_SESSION" -> {
+                    restoreSessionState()
+                    Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                }
+                else -> super.onCustomCommand(session, controller, customCommand, args)
+            }
+        }
+
+        // Library methods for browse functionality
         override fun onGetLibraryRoot(
             session: MediaLibrarySession,
             browser: MediaSession.ControllerInfo,
@@ -93,12 +227,12 @@ class MusicPlayerService : MediaLibraryService() {
             parentId: String,
             page: Int,
             pageSize: Int,
-            params: LibraryParams?
-        ): ListenableFuture<LibraryResult<com.google.common.collect.ImmutableList<MediaItem>>> {
-            // Return empty for now - can be extended for browse functionality
+            params: MediaLibraryService.LibraryParams?
+        ): ListenableFuture<androidx.media3.session.LibraryResult<ImmutableList<MediaItem>>> {
+            // Could be extended to provide browsable content
             return Futures.immediateFuture(
-                LibraryResult.ofItemList(
-                    com.google.common.collect.ImmutableList.of(),
+                androidx.media3.session.LibraryResult.ofItemList(
+                    ImmutableList.of(),
                     params
                 )
             )
