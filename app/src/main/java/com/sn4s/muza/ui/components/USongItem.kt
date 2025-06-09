@@ -35,6 +35,9 @@ fun USongItem(
     modifier: Modifier = Modifier,
     enableSwipeToQueue: Boolean = true,
     showMoreOptions: Boolean = true,
+    // NEW: Collection context for smart playback
+    collectionSongs: List<Song>? = null, // All songs in current playlist/album/liked
+    playbackMode: PlaybackMode = PlaybackMode.SINGLE_SONG,
     // Unified controller - single source of truth
     playerController: PlayerController = hiltViewModel(),
     likeViewModel: LikeViewModel = hiltViewModel()
@@ -47,8 +50,23 @@ fun USongItem(
     var showAddToPlaylistDialog by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
 
-    // Unified play action - no more callback confusion
-    val onPlayClick = { playerController.playSong(song) }
+    // Smart play action based on context
+    val onPlayClick = {
+        when (playbackMode) {
+            PlaybackMode.SINGLE_SONG -> playerController.playSong(song)
+            PlaybackMode.FROM_COLLECTION -> {
+                collectionSongs?.let { songs ->
+                    playerController.playFromCollectionStartingAt(songs, song)
+                } ?: playerController.playSong(song)
+            }
+            PlaybackMode.SHUFFLE_COLLECTION -> {
+                collectionSongs?.let { songs ->
+                    playerController.playShuffledFromCollection(songs, song)
+                } ?: playerController.playSong(song)
+            }
+        }
+    }
+
     val onLikeToggle = { likeViewModel.toggleLike(song.id) }
     val onAddToQueue = { playNext: Boolean -> playerController.addSongToQueue(song, playNext) }
 
@@ -294,7 +312,7 @@ private fun StandardSongItem(
 @Composable
 private fun UnifiedMoreOptionsMenu(
     song: Song,
-    playerController: PlayerController,
+    playerController: PlayerController = hiltViewModel(),
     onDismiss: () -> Unit
 ) {
     var showAddToPlaylistDialog by remember { mutableStateOf(false) }
@@ -350,7 +368,13 @@ private fun UnifiedMoreOptionsMenu(
     }
 }
 
-// Convenience composable for backward compatibility
+enum class PlaybackMode {
+    SINGLE_SONG,           // Just play this song
+    FROM_COLLECTION,       // Play from collection starting at this song
+    SHUFFLE_COLLECTION     // Shuffle collection starting with this song
+}
+
+//backward compatibility
 @Composable
 fun SongItem(
     song: Song,

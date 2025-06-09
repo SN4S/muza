@@ -211,6 +211,56 @@ class PlayerController @Inject constructor(
      */
     fun addPlaylistToQueue(songs: List<Song>, playNext: Boolean = false) = addToQueue(songs, playNext)
 
+    /**
+     * Play specific song from a collection and queue all remaining songs
+     * This is the key method for your use case!
+     */
+    fun playFromCollectionStartingAt(
+        allSongs: List<Song>,
+        selectedSong: Song,
+        shuffle: Boolean = false
+    ) {
+        val songIndex = allSongs.indexOf(selectedSong)
+        if (songIndex == -1) {
+            // Fallback: just play the song
+            playSong(selectedSong)
+            return
+        }
+
+        val finalSongs = if (shuffle) allSongs.shuffled() else allSongs
+        val finalIndex = if (shuffle) {
+            finalSongs.indexOf(selectedSong)
+        } else {
+            songIndex
+        }
+
+        playPlaylist(finalSongs, finalIndex)
+    }
+
+    /**
+     * Play song from playlist/album and queue remaining songs
+     */
+    fun playFromPlaylist(songs: List<Song>, selectedSong: Song) =
+        playFromCollectionStartingAt(songs, selectedSong, shuffle = false)
+
+    /**
+     * Play song from album and queue remaining songs
+     */
+    fun playFromAlbum(songs: List<Song>, selectedSong: Song) =
+        playFromCollectionStartingAt(songs, selectedSong, shuffle = false)
+
+    /**
+     * Play song from liked songs and queue remaining
+     */
+    fun playFromLikedSongs(songs: List<Song>, selectedSong: Song) =
+        playFromCollectionStartingAt(songs, selectedSong, shuffle = false)
+
+    /**
+     * Play shuffled from any collection
+     */
+    fun playShuffledFromCollection(allSongs: List<Song>, selectedSong: Song) =
+        playFromCollectionStartingAt(allSongs, selectedSong, shuffle = true)
+
     // === Utility Methods ===
 
     fun stop() = executeWithErrorHandling("stop playback") {

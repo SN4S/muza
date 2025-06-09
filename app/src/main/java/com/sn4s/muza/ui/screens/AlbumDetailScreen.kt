@@ -13,6 +13,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.sn4s.muza.ui.components.PlaybackMode
 import com.sn4s.muza.ui.components.USongItem
 import com.sn4s.muza.ui.viewmodels.AlbumDetailViewModel
 import com.sn4s.muza.ui.viewmodels.PlayerController
@@ -170,7 +171,7 @@ fun AlbumDetailScreen(
                                     ) {
                                         Button(
                                             onClick = {
-                                                playerViewModel.playPlaylist(albumSongs)
+                                                playerViewModel.playFromAlbum(albumSongs,albumSongs.first())
                                             }
                                         ) {
                                             Icon(
@@ -250,6 +251,8 @@ fun AlbumDetailScreen(
                                 Box(modifier = Modifier.weight(1f)) {
                                     USongItem(
                                         song = song,
+                                        collectionSongs = albumSongs,      // Pass all album songs
+                                        playbackMode = PlaybackMode.FROM_COLLECTION,
                                         modifier = Modifier.padding(vertical = 4.dp)
                                     )
                                 }
