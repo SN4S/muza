@@ -2,6 +2,7 @@ package com.sn4s.muza.ui.viewmodels
 
 import android.content.Context
 import android.net.Uri
+import android.provider.OpenableColumns
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,10 +14,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.asRequestBody
-import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -83,7 +80,7 @@ class ArtistViewModel @Inject constructor(
     private fun loadUserSongs() {
         viewModelScope.launch {
             try {
-                repository.getUserSongs()
+                repository.getCurrentUserSongs()
                     .catch { e ->
                         Log.e("ArtistViewModel", "Failed to load user songs", e)
                         _error.value = "Failed to load songs: ${e.message}"
@@ -121,19 +118,15 @@ class ArtistViewModel @Inject constructor(
                 Log.d("ArtistViewModel", "File created: ${audioFile.name}, size: ${audioFile.length()}")
                 _uploadProgress.value = 0.2f
 
-                val titleBody = title.toRequestBody("text/plain".toMediaTypeOrNull())
-                val albumIdBody = albumId?.toString()?.toRequestBody("text/plain".toMediaTypeOrNull())
-
-                val requestFile = audioFile.asRequestBody("audio/*".toMediaTypeOrNull())
-                val filePart = MultipartBody.Part.createFormData("file", audioFile.name, requestFile)
-
                 _uploadProgress.value = 0.4f
 
                 Log.d("ArtistViewModel", "Uploading to server...")
-                val uploadedSong = repository.uploadSong(
-                    title = titleBody,
-                    albumId = albumIdBody,
-                    file = filePart
+                // FIXED: Use createSong instead of uploadSong
+                val uploadedSong = repository.createSong(
+                    title = title,
+                    file = audioFile,
+                    albumId = albumId,
+                    genreIds = null
                 )
 
                 _uploadProgress.value = 1f
@@ -284,23 +277,26 @@ class ArtistViewModel @Inject constructor(
     }
 
     private fun getFileNameFromUri(uri: Uri): String? {
-        return try {
-            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-                if (nameIndex >= 0 && cursor.moveToFirst()) {
-                    cursor.getString(nameIndex)
-                } else {
-                    null
+        var result: String? = null
+        if (uri.scheme == "content") {
+            val cursor = context.contentResolver.query(uri, null, null, null, null)
+            cursor?.use { c ->
+                if (c.moveToFirst()) {
+                    val displayNameIndex = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (displayNameIndex != -1) {
+                        result = c.getString(displayNameIndex)
+                    }
                 }
             }
-        } catch (e: Exception) {
-            Log.e("ArtistViewModel", "Failed to get file name from URI", e)
-            null
         }
-    }
-
-    fun refreshContent() {
-        loadArtistContent()
+        if (result == null) {
+            result = uri.path
+            val cut = result?.lastIndexOf('/')
+            if (cut != -1 && cut != null) {
+                result = result?.substring(cut + 1)
+            }
+        }
+        return result
     }
 
     fun clearError() {
@@ -309,5 +305,9 @@ class ArtistViewModel @Inject constructor(
 
     fun clearUploadSuccess() {
         _uploadSuccess.value = false
+    }
+
+    fun refreshContent() {
+        loadArtistContent()
     }
 }

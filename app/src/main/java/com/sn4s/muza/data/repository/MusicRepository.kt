@@ -1,15 +1,19 @@
 package com.sn4s.muza.data.repository
 
-import android.util.Log
+import android.content.Context
+import android.net.Uri
 import com.sn4s.muza.data.model.*
 import com.sn4s.muza.data.network.ApiService
 import com.sn4s.muza.data.security.TokenManager
 import com.sn4s.muza.player.MusicPlayerManager
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
-import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.File
+import java.io.FileOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,39 +23,100 @@ class MusicRepository @Inject constructor(
     private val tokenManager: TokenManager,
     private val playerManager: MusicPlayerManager
 ) {
-    // Auth
+
+    // Authentication
     suspend fun login(username: String, password: String): Token {
-        Log.d("MusicRepository", "Attempting login for user: $username")
-        val response = apiService.login(username, password)
-        Log.d("MusicRepository", "Login response: accessToken=${response.accessToken}, tokenType=${response.tokenType}")
-        return response
+        return apiService.login(username, password)
     }
 
     suspend fun register(user: UserCreate): User {
         return apiService.register(user)
     }
 
+    suspend fun refreshToken(refreshToken: String): Token {
+        return apiService.refreshToken(RefreshTokenRequest(refreshToken))
+    }
+
+    // Current user
     fun getCurrentUser(): Flow<User> = flow {
         emit(apiService.getCurrentUser())
     }
 
-    suspend fun updateProfile(username: String, bio: String?, isArtist: Boolean): User {
-        Log.d("MusicRepository", "Updating profile with isArtist: $isArtist")
-        val currentUser = getCurrentUser().first()
-        val userBase = UserBase(
-            email = currentUser.email,
-            username = username,
-            bio = bio,
-            image = currentUser.image,
-            isArtist = isArtist
+    suspend fun updateCurrentUser(user: UserBase): User {
+        return apiService.updateCurrentUser(user)
+    }
+
+    // NEW: User profile with image upload
+    suspend fun updateUserProfile(userUpdate: UserUpdate, context: Context): User {
+        val usernameBody = userUpdate.username.toRequestBody("text/plain".toMediaType())
+        val emailBody = userUpdate.email.toRequestBody("text/plain".toMediaType())
+        val bioBody = userUpdate.bio?.toRequestBody("text/plain".toMediaType())
+        val isArtistBody = userUpdate.isArtist.toString().toRequestBody("text/plain".toMediaType())
+
+        val imagePart = if (userUpdate.imageUri != null) {
+            val uri = userUpdate.imageUri
+            // Copy URI content to temporary file
+            val inputStream = context.contentResolver.openInputStream(uri)
+            val tempFile = File(context.cacheDir, "temp_profile_image.jpg")
+
+            inputStream?.use { input ->
+                FileOutputStream(tempFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            val requestFile = tempFile.asRequestBody("image/*".toMediaType())
+            MultipartBody.Part.createFormData("image", tempFile.name, requestFile)
+        } else {
+            null
+        }
+
+        return apiService.updateCurrentUserWithImage(
+            username = usernameBody,
+            email = emailBody,
+            bio = bioBody,
+            isArtist = isArtistBody,
+            image = imagePart
         )
-        Log.d("MusicRepository", "Sending update request with UserBase: $userBase")
-        val updatedUser = apiService.updateProfile(userBase)
-        Log.d("MusicRepository", "Received updated user: $updatedUser")
-        return updatedUser
+    }
+
+    suspend fun deleteUserImage() {
+        apiService.deleteUserImage()
+    }
+
+    // Helper method to get user image URL
+    fun getUserImageUrl(userId: Int): String {
+        return "${com.sn4s.muza.di.NetworkModule.BASE_URL}users/$userId/image"
+    }
+
+    fun getCurrentUserSongs(skip: Int = 0, limit: Int = 100): Flow<List<Song>> = flow {
+        emit(apiService.getCurrentUserSongs(skip, limit))
+    }
+
+    fun getCurrentUserAlbums(skip: Int = 0, limit: Int = 100): Flow<List<Album>> = flow {
+        emit(apiService.getCurrentUserAlbums(skip, limit))
+    }
+
+    fun getCurrentUserPlaylists(skip: Int = 0, limit: Int = 100): Flow<List<Playlist>> = flow {
+        emit(apiService.getCurrentUserPlaylists(skip, limit))
     }
 
     // Songs
+    suspend fun createSong(
+        title: String,
+        file: File,
+        albumId: Int? = null,
+        genreIds: List<Int>? = null
+    ): Song {
+        val titleBody = title.toRequestBody("text/plain".toMediaType())
+        val albumIdBody = albumId?.toString()?.toRequestBody("text/plain".toMediaType())
+        val genreIdsBody = genreIds?.joinToString(",")?.toRequestBody("text/plain".toMediaType())
+        val fileBody = file.asRequestBody("audio/*".toMediaType())
+        val filePart = MultipartBody.Part.createFormData("file", file.name, fileBody)
+
+        return apiService.createSong(titleBody, albumIdBody, genreIdsBody, filePart)
+    }
+
     fun getSongs(skip: Int = 0, limit: Int = 100): Flow<List<Song>> = flow {
         emit(apiService.getSongs(skip, limit))
     }
@@ -60,27 +125,22 @@ class MusicRepository @Inject constructor(
         return apiService.getSong(songId)
     }
 
-    fun getUserSongs(skip: Int = 0, limit: Int = 100): Flow<List<Song>> = flow {
-        emit(apiService.getCurrentUserSongs(skip, limit))  // For current user
-    }
-
-
-
-    suspend fun uploadSong(
-        title: RequestBody,
-        albumId: RequestBody?,
-        file: MultipartBody.Part
-    ): Song {
-        return apiService.createSong(title, albumId, null, file)
-    }
-
     suspend fun updateSong(
         songId: Int,
-        title: RequestBody?,
-        albumId: RequestBody?,
-        file: MultipartBody.Part?
+        title: String? = null,
+        albumId: Int? = null,
+        genreIds: List<Int>? = null,
+        file: File? = null
     ): Song {
-        return apiService.updateSong(songId, title, albumId, null, file)
+        val titleBody = title?.toRequestBody("text/plain".toMediaType())
+        val albumIdBody = albumId?.toString()?.toRequestBody("text/plain".toMediaType())
+        val genreIdsBody = genreIds?.joinToString(",")?.toRequestBody("text/plain".toMediaType())
+        val filePart = file?.let {
+            val fileBody = it.asRequestBody("audio/*".toMediaType())
+            MultipartBody.Part.createFormData("file", it.name, fileBody)
+        }
+
+        return apiService.updateSong(songId, titleBody, albumIdBody, genreIdsBody, filePart)
     }
 
     suspend fun deleteSong(songId: Int) {
@@ -243,6 +303,7 @@ class MusicRepository @Inject constructor(
         tokenManager.clearToken()
     }
 
+    // Social Features
     suspend fun followUser(userId: Int): FollowResponse {
         return apiService.followUser(userId)
     }

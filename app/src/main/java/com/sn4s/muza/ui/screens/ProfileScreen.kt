@@ -1,5 +1,10 @@
+// REPLACE app/src/main/java/com/sn4s/muza/ui/screens/ProfileScreen.kt
+
 package com.sn4s.muza.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,12 +15,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.sn4s.muza.data.model.User
 import com.sn4s.muza.di.NetworkModule
 import com.sn4s.muza.ui.viewmodels.AuthViewModel
@@ -28,8 +38,10 @@ fun ProfileScreen(
     authViewModel: AuthViewModel = hiltViewModel(),
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+
     LaunchedEffect(Unit) {
         NetworkModule.unauthorizedEvent.collect {
             if (currentRoute != "login") {
@@ -44,6 +56,23 @@ fun ProfileScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     val isEditing by viewModel.isEditing.collectAsState()
+    val selectedImageUri by viewModel.selectedImageUri.collectAsState()
+    val hasProfileImage by viewModel.hasProfileImage.collectAsState()
+    val imageUpdateSuccess by viewModel.imageUpdateSuccess.collectAsState()
+
+    // Image picker launcher
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { viewModel.selectImage(it) }
+    }
+
+    // Show success message
+    LaunchedEffect(imageUpdateSuccess) {
+        if (imageUpdateSuccess) {
+            viewModel.clearImageUpdateSuccess()
+        }
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -118,7 +147,11 @@ fun ProfileScreen(
                         user = user!!,
                         isEditing = isEditing,
                         isLoading = isLoading,
-                        viewModel = viewModel
+                        selectedImageUri = selectedImageUri,
+                        hasProfileImage = hasProfileImage,
+                        viewModel = viewModel,
+                        onImageSelect = { imagePickerLauncher.launch("image/*") },
+                        onImageDelete = { viewModel.deleteUserImage() }
                     )
                 }
 
@@ -142,6 +175,43 @@ fun ProfileScreen(
                 }
             }
         }
+
+        // Error display during editing
+        error?.let { errorMessage ->
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Error,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = errorMessage,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = { viewModel.clearError() }) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Dismiss",
+                                tint = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -150,9 +220,15 @@ private fun ProfileHeaderCard(
     user: User,
     isEditing: Boolean,
     isLoading: Boolean,
-    viewModel: ProfileViewModel
+    selectedImageUri: Uri?,
+    hasProfileImage: Boolean,
+    viewModel: ProfileViewModel,
+    onImageSelect: () -> Unit,
+    onImageDelete: () -> Unit
 ) {
+    val context = LocalContext.current
     val editedUsername by viewModel.editedUsername.collectAsState()
+    val editedEmail by viewModel.editedEmail.collectAsState()
     val editedBio by viewModel.editedBio.collectAsState()
     val editedIsArtist by viewModel.editedIsArtist.collectAsState()
 
@@ -163,27 +239,106 @@ private fun ProfileHeaderCard(
             modifier = Modifier.padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Avatar
+            // Avatar with edit functionality
             Box(
                 modifier = Modifier.size(120.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Card(
-                    modifier = Modifier.fillMaxSize(),
-                    shape = CircleShape,
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                // Profile image
+                if (selectedImageUri != null || hasProfileImage) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(selectedImageUri ?: viewModel.getUserImageUrl(user.id))
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Profile Picture",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .clickable(enabled = isEditing) { onImageSelect() },
+                        contentScale = ContentScale.Crop,
+                        fallback = null
                     )
-                ) {
+                } else {
+                    // Fallback avatar
+                    Card(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable(enabled = isEditing) { onImageSelect() },
+                        shape = CircleShape,
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                    ) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = user.username.take(2).uppercase(),
+                                style = MaterialTheme.typography.headlineLarge,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                }
+
+                // Edit overlay for image
+                if (isEditing) {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .clickable { onImageSelect() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = user.username.take(2).uppercase(),
-                            style = MaterialTheme.typography.headlineLarge,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
+                        ) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.CameraAlt,
+                                    contentDescription = "Change Photo",
+                                    modifier = Modifier.size(32.dp),
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Image controls (during editing)
+            if (isEditing && (selectedImageUri != null || hasProfileImage)) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (selectedImageUri != null) {
+                        OutlinedButton(
+                            onClick = { viewModel.removeSelectedImage() }
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = null)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Cancel")
+                        }
+                    }
+                    if (hasProfileImage) {
+                        OutlinedButton(
+                            onClick = onImageDelete,
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = null)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Remove")
+                        }
                     }
                 }
             }
@@ -192,104 +347,72 @@ private fun ProfileHeaderCard(
 
             if (isEditing) {
                 // Edit Mode
-                OutlinedTextField(
-                    value = editedUsername,
-                    onValueChange = { viewModel.updateUsername(it) },
-                    label = { Text("Username") },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !isLoading,
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                OutlinedTextField(
-                    value = editedBio,
-                    onValueChange = { viewModel.updateBio(it) },
-                    label = { Text("Bio") },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !isLoading,
-                    maxLines = 3,
-                    placeholder = { Text("Tell us about yourself...") }
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Artist Toggle
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (editedIsArtist)
-                            MaterialTheme.colorScheme.primaryContainer
-                        else MaterialTheme.colorScheme.surfaceVariant
-                    )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
+                    OutlinedTextField(
+                        value = editedUsername,
+                        onValueChange = viewModel::updateUsername,
+                        label = { Text("Username") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    OutlinedTextField(
+                        value = editedEmail,
+                        onValueChange = viewModel::updateEmail,
+                        label = { Text("Email") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    OutlinedTextField(
+                        value = editedBio,
+                        onValueChange = viewModel::updateBio,
+                        label = { Text("Bio") },
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 3
+                    )
+
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { viewModel.updateIsArtist(!editedIsArtist) }
-                            .padding(16.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            Icons.Default.Star,
-                            contentDescription = null,
-                            tint = if (editedIsArtist)
-                                MaterialTheme.colorScheme.onPrimaryContainer
-                            else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Artist Account",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = if (editedIsArtist)
-                                    MaterialTheme.colorScheme.onPrimaryContainer
-                                else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = "Upload music and create albums",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (editedIsArtist)
-                                    MaterialTheme.colorScheme.onPrimaryContainer
-                                else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
+                        Checkbox(
                             checked = editedIsArtist,
-                            onCheckedChange = { viewModel.updateIsArtist(it) },
-                            enabled = !isLoading
+                            onCheckedChange = viewModel::updateIsArtist
                         )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("I am an artist")
                     }
-                }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { viewModel.cancelEditing() },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Cancel")
+                        }
 
-                // Action Buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = { viewModel.cancelEditing() },
-                        modifier = Modifier.weight(1f),
-                        enabled = !isLoading
-                    ) {
-                        Text("Cancel")
-                    }
-                    Button(
-                        onClick = { viewModel.saveProfile() },
-                        modifier = Modifier.weight(1f),
-                        enabled = !isLoading && editedUsername.isNotBlank()
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
-                        } else {
-                            Text("Save")
+                        Button(
+                            onClick = { viewModel.saveProfile() },
+                            enabled = !isLoading,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            if (isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                            } else {
+                                Text("Save")
+                            }
                         }
                     }
                 }
@@ -333,10 +456,10 @@ private fun ProfileHeaderCard(
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = user.bio!!,
-                            style = MaterialTheme.typography.bodyMedium,
-                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.fillMaxWidth()
+                            textAlign = TextAlign.Center,
+                            fontStyle = FontStyle.Italic
                         )
                     }
                 }
@@ -351,41 +474,25 @@ private fun ArtistStatsCard(user: User) {
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp)
+            modifier = Modifier.padding(16.dp)
         ) {
             Text(
-                text = "Your Music",
-                style = MaterialTheme.typography.titleLarge,
+                text = "Artist Stats",
+                style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                StatItem(
+                StatColumn(
                     count = user.songs.size,
-                    label = "Songs",
-                    icon = Icons.Default.MusicNote,
-                    modifier = Modifier.weight(1f)
+                    label = "Songs"
                 )
-
-                StatItem(
+                StatColumn(
                     count = user.albums.size,
-                    label = "Albums",
-                    icon = Icons.Default.Album,
-                    modifier = Modifier.weight(1f)
-                )
-
-                StatItem(
-                    count = user.songs.sumOf { it.likeCount },
-                    label = "Total Likes",
-                    icon = Icons.Default.Favorite,
-                    modifier = Modifier.weight(1f)
+                    label = "Albums"
                 )
             }
         }
@@ -393,65 +500,47 @@ private fun ArtistStatsCard(user: User) {
 }
 
 @Composable
-private fun StatItem(
-    count: Int,
-    label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    modifier: Modifier = Modifier
-) {
+private fun StatColumn(count: Int, label: String) {
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(28.dp)
-        )
-        Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = count.toString(),
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.primary
+            style = MaterialTheme.typography.headlineSmall
         )
-        Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
 
 @Composable
-private fun AccountSettingsCard(
-    onLogout: () -> Unit
-) {
+private fun AccountSettingsCard(onLogout: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(20.dp)
+            modifier = Modifier.padding(16.dp)
         ) {
             Text(
                 text = "Account",
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            Button(
+            TextButton(
                 onClick = onLogout,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
-                )
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                ),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(
-                    Icons.Default.ExitToApp,
+                    Icons.Default.Logout,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Sign Out")

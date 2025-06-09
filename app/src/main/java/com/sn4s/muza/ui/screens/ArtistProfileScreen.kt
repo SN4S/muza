@@ -19,6 +19,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.sn4s.muza.data.model.*
 import com.sn4s.muza.di.NetworkModule
 import com.sn4s.muza.ui.components.SongItem
+import com.sn4s.muza.ui.components.UserAvatar
 import com.sn4s.muza.ui.viewmodels.ArtistProfileViewModel
 import com.sn4s.muza.ui.viewmodels.PlayerViewModel
 
@@ -266,25 +267,32 @@ fun EnhancedProfileCard(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Avatar
-            Card(
-                modifier = Modifier.size(120.dp),
-                shape = CircleShape,
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Avatar",
-                        modifier = Modifier.size(60.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+//            Card(
+//                modifier = Modifier.size(120.dp),
+//                shape = CircleShape,
+//                colors = CardDefaults.cardColors(
+//                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+//                )
+//            ) {
+//                Box(
+//                    modifier = Modifier.fillMaxSize(),
+//                    contentAlignment = Alignment.Center
+//                ) {
+//                    Icon(
+//                        imageVector = Icons.Default.Person,
+//                        contentDescription = "Avatar",
+//                        modifier = Modifier.size(60.dp),
+//                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+//                    )
+//                }
+//            }
+
+            UserAvatar(
+                userId = profile.id,
+                username = profile.username,
+                imageUrl = profile.image,
+                size = 120.dp
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -374,25 +382,30 @@ fun BasicProfileCard(artist: UserNested) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Avatar
-            Card(
-                modifier = Modifier.size(120.dp),
-                shape = CircleShape,
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Avatar",
-                        modifier = Modifier.size(60.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+//            Card(
+//                modifier = Modifier.size(120.dp),
+//                shape = CircleShape,
+//                colors = CardDefaults.cardColors(
+//                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+//                )
+//            ) {
+//                Box(
+//                    modifier = Modifier.fillMaxSize(),
+//                    contentAlignment = Alignment.Center
+//                ) {
+//                    Icon(
+//                        imageVector = Icons.Default.Person,
+//                        contentDescription = "Avatar",
+//                        modifier = Modifier.size(60.dp),
+//                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+//                    )
+//                }
+//            }
+
+            UserAvatar(
+                userNested = artist,
+                size = 120.dp
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 

@@ -22,6 +22,7 @@ import com.sn4s.muza.data.model.Album
 import com.sn4s.muza.data.model.User
 import com.sn4s.muza.di.NetworkModule
 import com.sn4s.muza.ui.components.SongItem
+import com.sn4s.muza.ui.components.UserAvatar
 import com.sn4s.muza.ui.viewmodels.PlayerViewModel
 import com.sn4s.muza.ui.viewmodels.SearchViewModel
 
@@ -97,35 +98,21 @@ private fun SearchHeader(
             leadingIcon = {
                 Icon(Icons.Default.Search, contentDescription = "Search")
             },
-            trailingIcon = {
-                if (searchQuery.isNotEmpty()) {
-                    IconButton(onClick = { onSearchQueryChange("") }) {
-                        Icon(Icons.Default.Clear, contentDescription = "Clear")
-                    }
-                }
-            },
-            singleLine = true,
-            shape = MaterialTheme.shapes.extraLarge
+            singleLine = true
         )
 
-        if (searchQuery.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-            // Filter Chips
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(horizontal = 4.dp)
-            ) {
-                items(SearchFilter.values()) { filter ->
-                    FilterChip(
-                        onClick = { onFilterChange(filter) },
-                        label = { Text(filter.displayName) },
-                        selected = selectedFilter == filter,
-                        leadingIcon = if (selectedFilter == filter) {
-                            { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                        } else null
-                    )
-                }
+        // Filter Chips
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(SearchFilter.values()) { filter ->
+                FilterChip(
+                    onClick = { onFilterChange(filter) },
+                    label = { Text(filter.displayName) },
+                    selected = selectedFilter == filter
+                )
             }
         }
     }
@@ -143,7 +130,7 @@ private fun SearchEmptyState() {
         Icon(
             Icons.Default.Search,
             contentDescription = null,
-            modifier = Modifier.size(80.dp),
+            modifier = Modifier.size(64.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -175,25 +162,20 @@ private fun SearchResults(
     ) {
         when (selectedFilter) {
             SearchFilter.ALL -> {
-                // Show all results with section headers
+                // Show all results with sections
                 if (songs.isNotEmpty()) {
                     item {
-                        SearchSectionHeader(
-                            title = "Songs",
-                            count = songs.size,
-                            onPlayAll = if (playerViewModel != null && songs.size > 1) {
-                                { playerViewModel.playPlaylist(songs) }
-                            } else null
-                        )
+                        SearchSectionHeader("Songs", songs.size)
                     }
-                    items(songs.take(5)) { song ->
+                    items(songs.take(3)) { song ->
                         SongItem(
                             song = song,
-                            playerViewModel = playerViewModel,
-                            modifier = Modifier.fillMaxWidth()
+                            onPlayClick = {
+                                playerViewModel?.playSong(song)
+                            }
                         )
                     }
-                    if (songs.size > 5) {
+                    if (songs.size > 3) {
                         item {
                             TextButton(
                                 onClick = { /* TODO: Show all songs */ },
@@ -273,8 +255,9 @@ private fun SearchResults(
                     items(songs) { song ->
                         SongItem(
                             song = song,
-                            playerViewModel = playerViewModel,
-                            modifier = Modifier.fillMaxWidth()
+                            onPlayClick = {
+                                playerViewModel?.playSong(song)
+                            }
                         )
                     }
                 } else {
@@ -372,55 +355,53 @@ private fun ArtistResultItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Artist Avatar
-            Card(
-                modifier = Modifier.size(56.dp),
-                shape = CircleShape,
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = artist.username.take(2).uppercase(),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
+            // FIXED: Use UserAvatar component
+            UserAvatar(
+                user = artist,
+                size = 56.dp
+            )
 
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = artist.username,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (artist.isArtist) {
-                        Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = artist.username,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                if (artist.isArtist) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Icon(
                             Icons.Default.Star,
-                            contentDescription = "Artist",
+                            contentDescription = null,
                             modifier = Modifier.size(16.dp),
                             tint = MaterialTheme.colorScheme.primary
                         )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Artist",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
+                } else {
+                    Text(
+                        text = "User",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
-                artist.bio?.let { bio ->
+                if (!artist.bio.isNullOrBlank()) {
                     Text(
-                        text = bio,
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = artist.bio!!,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }

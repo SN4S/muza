@@ -1,5 +1,6 @@
 package com.sn4s.muza.data.model
 
+import android.net.Uri
 import com.google.gson.annotations.SerializedName
 
 data class User(
@@ -16,6 +17,14 @@ data class User(
     val createdAt: String,
     val songs: List<Song> = emptyList(),
     val albums: List<AlbumNested> = emptyList()
+)
+
+data class UserUpdate(
+    val username: String,
+    val email: String,
+    val bio: String?,
+    val isArtist: Boolean,
+    val imageUri: Uri? = null // For local image selection
 )
 
 data class UserNested(
@@ -163,12 +172,6 @@ data class UserCreate(
     val image: String? = null,
     @SerializedName("is_artist")
     val isArtist: Boolean = false
-)
-
-data class UserUpdate(
-    val username: String? = null,
-    val bio: String? = null,
-    val image: String? = null
 )
 
 data class UserBase(
