@@ -163,6 +163,10 @@ class MusicRepository @Inject constructor(
         return "${com.sn4s.muza.di.NetworkModule.BASE_URL}songs/$songId/cover"
     }
 
+    fun getAlbumCoverUrl(albumId: Int): String {
+        return "${com.sn4s.muza.di.NetworkModule.BASE_URL}albums/$albumId/cover"
+    }
+
     // Search
     fun searchSongs(query: String, skip: Int = 0, limit: Int = 20): Flow<List<Song>> = flow {
         emit(apiService.searchSongs(query, skip, limit))
@@ -217,8 +221,7 @@ class MusicRepository @Inject constructor(
         albumId: Int,
         title: String,
         releaseDate: String,
-        cover: File? = null,
-        context: Context
+        cover: File? = null
     ): Album {
         val titleBody = title.toRequestBody("text/plain".toMediaType())
         val releaseDateBody = releaseDate.toRequestBody("text/plain".toMediaType())

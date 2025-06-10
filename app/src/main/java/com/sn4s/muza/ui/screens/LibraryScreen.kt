@@ -5,20 +5,27 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.sn4s.muza.data.model.Album
 import com.sn4s.muza.data.model.Playlist
 import com.sn4s.muza.data.model.Song
+import com.sn4s.muza.data.repository.MusicRepository
 import com.sn4s.muza.di.NetworkModule
 import com.sn4s.muza.ui.components.CreatePlaylistDialog
 import com.sn4s.muza.ui.viewmodels.LibraryViewModel
@@ -72,7 +79,7 @@ fun LibraryScreen(
             QuickAccessSection(
                 likedSongs = likedSongs,
                 playerViewModel = playerViewModel,
-                navController=navController
+                navController = navController
             )
         }
 
@@ -156,16 +163,15 @@ fun LibraryScreen(
                     }
                 }
             }
-
             LibraryFilter.PLAYLISTS -> {
                 val sortedPlaylists = playlists.sortedWith(getPlaylistSortComparator(sortBy))
 
                 if (sortedPlaylists.isEmpty() && !isLoading) {
                     item {
                         EmptyStateCard(
-                            icon = Icons.Default.PlaylistAdd,
+                            icon = Icons.Default.PlaylistPlay,
                             title = "No playlists yet",
-                            subtitle = "Create your first playlist to organize your music",
+                            subtitle = "Create your first playlist to get started",
                             actionText = "Create Playlist",
                             onActionClick = { showCreatePlaylistDialog = true }
                         )
@@ -179,7 +185,6 @@ fun LibraryScreen(
                     }
                 }
             }
-
             LibraryFilter.ALBUMS -> {
                 val sortedAlbums = albums.sortedWith(getAlbumSortComparator(sortBy))
 
@@ -187,8 +192,10 @@ fun LibraryScreen(
                     item {
                         EmptyStateCard(
                             icon = Icons.Default.Album,
-                            title = "No albums in your library",
-                            subtitle = "Albums you save will appear here"
+                            title = "No albums yet",
+                            subtitle = "Albums you save will appear here",
+                            actionText = null,
+                            onActionClick = null
                         )
                     }
                 } else {
@@ -202,13 +209,11 @@ fun LibraryScreen(
             }
         }
 
-        // Loading state
+        // Loading indicator
         if (isLoading) {
             item {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(32.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
@@ -217,15 +222,14 @@ fun LibraryScreen(
         }
     }
 
-    // Create Playlist Dialog
+    // Create playlist dialog
     if (showCreatePlaylistDialog) {
         CreatePlaylistDialog(
             onDismiss = { showCreatePlaylistDialog = false },
             onConfirm = { name, description ->
                 playlistViewModel.createPlaylist(name, description)
                 showCreatePlaylistDialog = false
-            },
-            isLoading = isLoading
+            }
         )
     }
 }
@@ -257,8 +261,8 @@ private fun LibraryHeader(
 @Composable
 private fun QuickAccessSection(
     likedSongs: List<Song>,
-    playerViewModel: PlayerController = hiltViewModel(),
-    navController: NavController,
+    playerViewModel: PlayerController,
+    navController: NavController
 ) {
     Column {
         Text(
@@ -287,8 +291,10 @@ private fun QuickAccessSection(
                 QuickAccessCard(
                     icon = Icons.Default.Download,
                     title = "Downloaded",
-                    subtitle = "In future upd.",
-                    onClick = { /* TODO */ }
+                    subtitle = "In future update",
+                    onClick = { /* TODO: Implement downloaded songs */ },
+                    enabled = false,
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             }
         }
@@ -306,42 +312,36 @@ private fun QuickAccessCard(
 ) {
     Card(
         modifier = Modifier
-            .width(140.dp)
+            .width(200.dp)
             .clickable(enabled = enabled) { onClick() },
         colors = CardDefaults.cardColors(
             containerColor = if (enabled) containerColor else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         )
     ) {
-        Box(
-            modifier = Modifier.size(120.dp),
-            contentAlignment = Alignment.Center
-        ){
-        Column(
+        Row(
             modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size(32.dp),
-                tint = if (enabled) {
-                    if (containerColor == MaterialTheme.colorScheme.primaryContainer)
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    else MaterialTheme.colorScheme.onSurfaceVariant
-                } else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                modifier = Modifier.size(24.dp),
+                tint = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-            )
-        }}
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
+            }
+        }
     }
 }
 
@@ -395,10 +395,7 @@ private fun FilterSection(
                         onClick = {
                             onSortChanged(option)
                             showSortMenu = false
-                        },
-                        leadingIcon = if (sortBy == option) {
-                            { Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
-                        } else null
+                        }
                     )
                 }
             }
@@ -420,22 +417,12 @@ private fun PlaylistListItem(
             )
         },
         supportingContent = {
-            Column {
-                Text("Playlist • ${playlist.songs.size} songs")
-                playlist.description?.let { description ->
-                    Text(
-                        text = description,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+            Text("Playlist • ${playlist.songs.size} songs")
         },
         leadingContent = {
             Card(
                 modifier = Modifier.size(56.dp),
+                shape = RoundedCornerShape(8.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
@@ -447,6 +434,7 @@ private fun PlaylistListItem(
                     Icon(
                         Icons.Default.PlaylistPlay,
                         contentDescription = null,
+                        modifier = Modifier.size(24.dp),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
@@ -469,6 +457,11 @@ private fun AlbumListItem(
     album: Album,
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current
+    val coverUrl = album.coverImage?.let {
+        "${NetworkModule.BASE_URL}albums/${album.id}/cover"
+    }
+
     ListItem(
         headlineContent = {
             Text(
@@ -483,19 +476,35 @@ private fun AlbumListItem(
         leadingContent = {
             Card(
                 modifier = Modifier.size(56.dp),
+                shape = RoundedCornerShape(8.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.Album,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                if (coverUrl != null) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(coverUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Album cover",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
                     )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Album,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         },
@@ -520,34 +529,42 @@ private fun EmptyStateCard(
     onActionClick: (() -> Unit)? = null
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size(64.dp),
+                modifier = Modifier.size(48.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+            }
 
             if (actionText != null && onActionClick != null) {
-                Spacer(modifier = Modifier.height(16.dp))
                 Button(onClick = onActionClick) {
                     Text(actionText)
                 }
@@ -560,76 +577,50 @@ private fun EmptyStateCard(
 private fun LibraryEmptyState(
     onCreatePlaylist: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
-        Icon(
-            Icons.Default.LibraryMusic,
-            contentDescription = null,
-            modifier = Modifier.size(80.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Your library is empty",
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = "Start by liking songs or creating playlists",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onCreatePlaylist) {
-            Text("Create Your First Playlist")
-        }
-    }
-}
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.LibraryMusic,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
-// Helper functions for sorting
-private fun getSortComparator(sortBy: SortOption): Comparator<LibraryItem> {
-    return when (sortBy) {
-        SortOption.RECENTLY_ADDED -> compareByDescending {
-            when (it) {
-                is LibraryItem.PlaylistItem -> it.playlist.createdAt
-                is LibraryItem.AlbumItem -> it.album.createdAt
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = "Your library is empty",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Start by creating a playlist or saving some music",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
             }
-        }
-        SortOption.ALPHABETICAL -> compareBy {
-            when (it) {
-                is LibraryItem.PlaylistItem -> it.playlist.name
-                is LibraryItem.AlbumItem -> it.album.title
-            }
-        }
-        SortOption.CREATOR -> compareBy {
-            when (it) {
-                is LibraryItem.PlaylistItem -> ""  // Playlists don't have creators in this context
-                is LibraryItem.AlbumItem -> it.album.creator.username
+
+            Button(onClick = onCreatePlaylist) {
+                Text("Create Playlist")
             }
         }
     }
 }
 
-private fun getPlaylistSortComparator(sortBy: SortOption): Comparator<Playlist> {
-    return when (sortBy) {
-        SortOption.RECENTLY_ADDED -> compareByDescending { it.createdAt }
-        SortOption.ALPHABETICAL -> compareBy { it.name }
-        SortOption.CREATOR -> compareBy { it.name } // Playlists are all user's own
-    }
-}
-
-private fun getAlbumSortComparator(sortBy: SortOption): Comparator<Album> {
-    return when (sortBy) {
-        SortOption.RECENTLY_ADDED -> compareByDescending { it.createdAt }
-        SortOption.ALPHABETICAL -> compareBy { it.title }
-        SortOption.CREATOR -> compareBy { it.creator.username }
-    }
-}
-
+// Data classes and enums
 sealed class LibraryItem {
     data class PlaylistItem(val playlist: Playlist) : LibraryItem()
     data class AlbumItem(val album: Album) : LibraryItem()
@@ -643,6 +634,46 @@ enum class LibraryFilter(val displayName: String) {
 
 enum class SortOption(val displayName: String) {
     RECENTLY_ADDED("Recently Added"),
-    ALPHABETICAL("Alphabetical"),
-    CREATOR("Creator")
+    ALPHABETICAL("A-Z"),
+    MOST_PLAYED("Most Played")
+}
+
+// Sorting functions
+private fun getSortComparator(sortBy: SortOption): Comparator<LibraryItem> {
+    return when (sortBy) {
+        SortOption.RECENTLY_ADDED -> compareByDescending { item ->
+            when (item) {
+                is LibraryItem.PlaylistItem -> item.playlist.createdAt
+                is LibraryItem.AlbumItem -> item.album.createdAt
+            }
+        }
+        SortOption.ALPHABETICAL -> compareBy { item ->
+            when (item) {
+                is LibraryItem.PlaylistItem -> item.playlist.name
+                is LibraryItem.AlbumItem -> item.album.title
+            }
+        }
+        SortOption.MOST_PLAYED -> compareByDescending { item ->
+            when (item) {
+                is LibraryItem.PlaylistItem -> item.playlist.songs.size
+                is LibraryItem.AlbumItem -> item.album.songs.size
+            }
+        }
+    }
+}
+
+private fun getPlaylistSortComparator(sortBy: SortOption): Comparator<Playlist> {
+    return when (sortBy) {
+        SortOption.RECENTLY_ADDED -> compareByDescending { it.createdAt }
+        SortOption.ALPHABETICAL -> compareBy { it.name }
+        SortOption.MOST_PLAYED -> compareByDescending { it.songs.size }
+    }
+}
+
+private fun getAlbumSortComparator(sortBy: SortOption): Comparator<Album> {
+    return when (sortBy) {
+        SortOption.RECENTLY_ADDED -> compareByDescending { it.createdAt }
+        SortOption.ALPHABETICAL -> compareBy { it.title }
+        SortOption.MOST_PLAYED -> compareByDescending { it.songs.size }
+    }
 }

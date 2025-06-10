@@ -95,7 +95,7 @@ class ArtistViewModel @Inject constructor(
         }
     }
 
-    fun uploadSong(title: String, albumId: Int?, audioFileUri: Uri) {
+    fun uploadSong(title: String, albumId: Int?, audioFileUri: Uri, coverUri: Uri? = null) {
         if (title.isBlank()) {
             _error.value = "Song title cannot be empty"
             return
@@ -115,16 +115,26 @@ class ArtistViewModel @Inject constructor(
                     return@launch
                 }
 
-                Log.d("ArtistViewModel", "File created: ${audioFile.name}, size: ${audioFile.length()}")
+                Log.d("ArtistViewModel", "Audio file created: ${audioFile.name}, size: ${audioFile.length()}")
                 _uploadProgress.value = 0.2f
+
+                // Handle cover art if provided
+                var coverFile: File? = null
+                if (coverUri != null) {
+                    coverFile = createFileFromUri(coverUri)
+                    if (coverFile == null || !coverFile.exists()) {
+                        Log.w("ArtistViewModel", "Could not access cover art file, continuing without cover")
+                        coverFile = null
+                    }
+                }
 
                 _uploadProgress.value = 0.4f
 
                 Log.d("ArtistViewModel", "Uploading to server...")
-                // FIXED: Use createSong instead of uploadSong
                 val uploadedSong = repository.createSong(
                     title = title,
                     file = audioFile,
+                    cover = coverFile, // Pass cover file
                     albumId = albumId,
                     genreIds = null
                 )
@@ -134,10 +144,12 @@ class ArtistViewModel @Inject constructor(
 
                 Log.d("ArtistViewModel", "Upload successful: ${uploadedSong.title}")
 
+                // Clean up temp files
                 try {
                     audioFile.delete()
+                    coverFile?.delete()
                 } catch (e: Exception) {
-                    Log.w("ArtistViewModel", "Could not delete temp file", e)
+                    Log.w("ArtistViewModel", "Could not delete temp files", e)
                 }
 
                 loadUserSongs()
@@ -157,7 +169,7 @@ class ArtistViewModel @Inject constructor(
         }
     }
 
-    fun createAlbum(title: String, releaseDate: String? = null) {
+    fun createAlbum(title: String, releaseDate: String? = null,coverUri: Uri? = null) {
         if (title.isBlank()) {
             _error.value = "Album title cannot be empty"
             return
@@ -170,14 +182,28 @@ class ArtistViewModel @Inject constructor(
             try {
                 Log.d("ArtistViewModel", "Creating album: $title")
 
-                val albumCreate = AlbumCreate(
+                var coverFile: File? = null
+                if (coverUri != null) {
+                    coverFile = createFileFromUri(coverUri)
+                    if (coverFile == null || !coverFile.exists()) {
+                        Log.w("ArtistViewModel", "Could not access cover art file, continuing without cover")
+                        coverFile = null
+                    }
+                }
+                // Use the correct method signature from MusicRepository
+                val createdAlbum = repository.createAlbum(
                     title = title,
-                    releaseDate = releaseDate ?: LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                    releaseDate = releaseDate ?: LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+                    cover = coverFile // No cover support in create album for now
                 )
 
-                val createdAlbum = repository.createAlbum(albumCreate)
-
                 Log.d("ArtistViewModel", "Album created successfully: ${createdAlbum.title}")
+
+                try {
+                    coverFile?.delete()
+                } catch (e: Exception) {
+                    Log.w("ArtistViewModel", "Could not delete temp files", e)
+                }
                 loadUserAlbums()
 
             } catch (e: Exception) {
