@@ -54,8 +54,8 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     //implementation(libs.androidx.material3)
-    implementation ("androidx.compose.material3:material3:1.1.2")
-    implementation ("androidx.compose.material:material-icons-extended:1.5.4")
+    implementation ("androidx.compose.material3:material3:1.3.2")
+    implementation ("androidx.compose.material:material-icons-extended:1.7.8")
     val nav_version = "2.9.0"
 
     // Jetpack Compose integration
@@ -70,22 +70,21 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
     
     // Dependency Injection
-    implementation("com.google.dagger:hilt-android:2.48")
     implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
     implementation("com.google.dagger:hilt-android:2.56.2")
     ksp("com.google.dagger:hilt-android-compiler:2.56.2")
     
     // Security
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation("androidx.security:security-crypto:1.1.0-beta01")
     
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
     
     // Media
-    implementation("androidx.media3:media3-ui:1.2.0")
-    implementation("androidx.media3:media3-exoplayer:1.4.1")
-    implementation("androidx.media3:media3-session:1.4.1")
+    implementation("androidx.media3:media3-ui:1.7.1")
+    implementation("androidx.media3:media3-exoplayer:1.7.1")
+    implementation("androidx.media3:media3-session:1.7.1")
     
     // Image Loading
     implementation("io.coil-kt:coil-compose:2.4.0")
