@@ -94,7 +94,8 @@ interface ApiService {
         @Part("title") title: RequestBody,
         @Part("album_id") albumId: RequestBody?,
         @Part("genre_ids") genreIds: RequestBody?,
-        @Part file: MultipartBody.Part
+        @Part file: MultipartBody.Part,
+        @Part cover: MultipartBody.Part?
     ): Song
 
     @GET("songs/")
@@ -113,8 +114,12 @@ interface ApiService {
         @Part("title") title: RequestBody?,
         @Part("album_id") albumId: RequestBody?,
         @Part("genre_ids") genreIds: RequestBody?,
-        @Part file: MultipartBody.Part?
+        @Part file: MultipartBody.Part?,
+        @Part cover: MultipartBody.Part?
     ): Song
+
+    @GET("songs/{song_id}/cover")
+    suspend fun getSongCover(@Path("song_id") songId: Int): ResponseBody
 
     @DELETE("songs/{song_id}")
     suspend fun deleteSong(@Path("song_id") songId: Int)
@@ -166,8 +171,14 @@ interface ApiService {
     ): List<Genre>
 
     // Albums
+    @Multipart
     @POST("albums/")
-    suspend fun createAlbum(@Body album: AlbumCreate): Album
+    suspend fun createAlbum(
+        @Part("title") title: RequestBody,
+        @Part("release_date") releaseDate: RequestBody,
+        @Part cover: MultipartBody.Part?
+    ): Album
+
 
     @GET("albums/")
     suspend fun getAlbums(
@@ -178,10 +189,13 @@ interface ApiService {
     @GET("albums/{album_id}")
     suspend fun getAlbum(@Path("album_id") albumId: Int): Album
 
+    @Multipart
     @PUT("albums/{album_id}")
     suspend fun updateAlbum(
         @Path("album_id") albumId: Int,
-        @Body album: AlbumCreate
+        @Part("title") title: RequestBody?,
+        @Part("release_date") releaseDate: RequestBody?,
+        @Part cover: MultipartBody.Part?
     ): Album
 
     @DELETE("albums/{album_id}")
@@ -193,6 +207,9 @@ interface ApiService {
         @Query("skip") skip: Int = 0,
         @Query("limit") limit: Int = 100
     ): List<Song>
+
+    @GET("albums/{album_id}/cover")
+    suspend fun getAlbumCover(@Path("album_id") albumId: Int): ResponseBody
 
     @POST("albums/{album_id}/songs/{song_id}")
     suspend fun addSongToAlbum(

@@ -67,6 +67,7 @@ class MusicRepository @Inject constructor(
 
             val requestFile = tempFile.asRequestBody("image/*".toMediaType())
             MultipartBody.Part.createFormData("image", tempFile.name, requestFile)
+            //tempFile.delete()
         } else {
             null
         }
@@ -105,6 +106,7 @@ class MusicRepository @Inject constructor(
     suspend fun createSong(
         title: String,
         file: File,
+        cover: File? = null,
         albumId: Int? = null,
         genreIds: List<Int>? = null
     ): Song {
@@ -114,7 +116,12 @@ class MusicRepository @Inject constructor(
         val fileBody = file.asRequestBody("audio/*".toMediaType())
         val filePart = MultipartBody.Part.createFormData("file", file.name, fileBody)
 
-        return apiService.createSong(titleBody, albumIdBody, genreIdsBody, filePart)
+        val coverPart = cover?.let { coverFile ->
+            val coverBody = coverFile.asRequestBody("image/*".toMediaType())
+            MultipartBody.Part.createFormData("cover", coverFile.name, coverBody)
+        }
+
+        return apiService.createSong(titleBody, albumIdBody, genreIdsBody, filePart,coverPart)
     }
 
     fun getSongs(skip: Int = 0, limit: Int = 100): Flow<List<Song>> = flow {
@@ -130,7 +137,8 @@ class MusicRepository @Inject constructor(
         title: String? = null,
         albumId: Int? = null,
         genreIds: List<Int>? = null,
-        file: File? = null
+        file: File? = null,
+        cover: File? = null
     ): Song {
         val titleBody = title?.toRequestBody("text/plain".toMediaType())
         val albumIdBody = albumId?.toString()?.toRequestBody("text/plain".toMediaType())
@@ -139,12 +147,20 @@ class MusicRepository @Inject constructor(
             val fileBody = it.asRequestBody("audio/*".toMediaType())
             MultipartBody.Part.createFormData("file", it.name, fileBody)
         }
+        val coverPart = cover?.let { coverFile ->
+            val coverBody = coverFile.asRequestBody("image/*".toMediaType())
+            MultipartBody.Part.createFormData("cover", coverFile.name, coverBody)
+        }
 
-        return apiService.updateSong(songId, titleBody, albumIdBody, genreIdsBody, filePart)
+        return apiService.updateSong(songId, titleBody, albumIdBody, genreIdsBody, filePart, coverPart)
     }
 
     suspend fun deleteSong(songId: Int) {
         apiService.deleteSong(songId)
+    }
+
+    fun getSongCoverUrl(songId: Int): String {
+        return "${com.sn4s.muza.di.NetworkModule.BASE_URL}songs/$songId/cover"
     }
 
     // Search
@@ -181,12 +197,38 @@ class MusicRepository @Inject constructor(
         emit(apiService.getCurrentUserAlbums(skip, limit))  // For current user
     }
 
-    suspend fun createAlbum(album: AlbumCreate): Album {
-        return apiService.createAlbum(album)
+    suspend fun createAlbum(
+        title: String,
+        releaseDate: String,
+        cover: File? = null
+    ): Album {
+        val titleBody = title.toRequestBody("text/plain".toMediaType())
+        val releaseDateBody = releaseDate.toRequestBody("text/plain".toMediaType())
+
+        val coverPart = cover?.let { coverFile ->
+            val coverBody = coverFile.asRequestBody("image/*".toMediaType())
+            MultipartBody.Part.createFormData("cover", coverFile.name, coverBody)
+        }
+
+        return apiService.createAlbum(titleBody, releaseDateBody, coverPart)
     }
 
-    suspend fun updateAlbum(albumId: Int, album: AlbumCreate): Album {
-        return apiService.updateAlbum(albumId, album)
+    suspend fun updateAlbum(
+        albumId: Int,
+        title: String,
+        releaseDate: String,
+        cover: File? = null,
+        context: Context
+    ): Album {
+        val titleBody = title.toRequestBody("text/plain".toMediaType())
+        val releaseDateBody = releaseDate.toRequestBody("text/plain".toMediaType())
+
+        val coverPart = cover?.let { coverFile ->
+            val coverBody = coverFile.asRequestBody("image/*".toMediaType())
+            MultipartBody.Part.createFormData("cover", coverFile.name, coverBody)
+        }
+
+        return apiService.updateAlbum(albumId,titleBody,releaseDateBody,coverPart)
     }
 
     suspend fun deleteAlbum(albumId: Int) {

@@ -69,6 +69,8 @@ data class Song(
     val duration: Int? = null,
     @SerializedName("file_path")
     val filePath: String,
+    @SerializedName("cover_image")
+    val coverImage: String? = null,
     @SerializedName("album_id")
     val albumId: Int? = null,
     @SerializedName("creator_id")
@@ -182,3 +184,38 @@ data class UserBase(
     @SerializedName("is_artist")
     val isArtist: Boolean = false
 )
+
+fun Song.getCoverImageUrl(baseUrl: String): String? {
+    return if (coverImage != null) "$baseUrl/songs/$id/cover" else null
+}
+
+fun Album.getCoverImageUrl(baseUrl: String): String? {
+    return if (coverImage != null) "$baseUrl/albums/$id/cover" else null
+}
+
+fun User.getImageUrl(baseUrl: String): String {
+    return "$baseUrl/users/$id/image"
+}
+
+// Data classes for cover info
+data class CoverInfo(
+    val url: String?,
+    val type: CoverType,
+    val fallbackText: String?
+)
+
+enum class CoverType {
+    SONG_COVER,
+    ALBUM_COVER,
+    ARTIST_AVATAR,
+    INITIALS
+}
+
+// Extension function for initials
+fun String.getInitials(): String {
+    return split(" ")
+        .take(2)
+        .mapNotNull { it.firstOrNull()?.uppercase() }
+        .joinToString("")
+        .ifBlank { take(2).uppercase() }
+}
