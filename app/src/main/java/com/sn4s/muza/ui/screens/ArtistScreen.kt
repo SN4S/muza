@@ -19,22 +19,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.sn4s.muza.data.model.Album
+import com.sn4s.muza.data.model.Song
 import com.sn4s.muza.di.NetworkModule
+import com.sn4s.muza.ui.components.PlaybackMode
+import com.sn4s.muza.ui.components.USongItem
 import com.sn4s.muza.ui.viewmodels.ArtistViewModel
 import com.sn4s.muza.ui.viewmodels.PlayerController
-import com.sn4s.muza.ui.viewmodels.PlayerViewModel
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArtistScreen(
     navController: NavController,
-    playerViewModel: PlayerController = hiltViewModel(),
+    playerController: PlayerController = hiltViewModel(),
     viewModel: ArtistViewModel = hiltViewModel()
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+
     LaunchedEffect(Unit) {
         NetworkModule.unauthorizedEvent.collect {
             if (currentRoute != "login") {
@@ -45,11 +52,13 @@ fun ArtistScreen(
         }
     }
 
-    val selectedTab by viewModel.selectedTab.collectAsState()
-    val userSongs by viewModel.userSongs.collectAsState()
-    val userAlbums by viewModel.userAlbums.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val error by viewModel.error.collectAsState()
+    val selectedTab by viewModel.selectedTab.collectAsStateWithLifecycle()
+    val userSongs by viewModel.userSongs.collectAsStateWithLifecycle()
+    val userAlbums by viewModel.userAlbums.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val error by viewModel.error.collectAsStateWithLifecycle()
+    val uploadProgress by viewModel.uploadProgress.collectAsStateWithLifecycle()
+    val uploadSuccess by viewModel.uploadSuccess.collectAsStateWithLifecycle()
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Top bar
@@ -80,63 +89,34 @@ fun ArtistScreen(
                 selected = selectedTab == 2,
                 onClick = { viewModel.setSelectedTab(2) },
                 text = { Text("Upload") },
-                icon = { Icon(Icons.Default.Upload, contentDescription = null) }
+                icon = { Icon(Icons.Default.CloudUpload, contentDescription = null) }
             )
         }
 
-        // Error display
-        if (error != null) {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = error!!,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.weight(1f)
-                    )
-                    IconButton(onClick = { viewModel.clearError() }) {
-                        Icon(
-                            Icons.Default.Close,
-                            contentDescription = "Dismiss",
-                            tint = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
-                }
-            }
-        }
-
-        // Tab content
+        // Content based on selected tab
         when (selectedTab) {
             0 -> SongsTab(
                 songs = userSongs,
                 isLoading = isLoading,
-                onDeleteSong = { viewModel.deleteSong(it) },
-                playerViewModel = playerViewModel
+                error = error,
+                playerController = playerController,
+                onRefresh = { viewModel.refreshContent() },
+                onDeleteSong = { songId -> viewModel.deleteSong(songId) }
             )
             1 -> AlbumsTab(
                 albums = userAlbums,
                 isLoading = isLoading,
-                onDeleteAlbum = { viewModel.deleteAlbum(it) },
-                onCreateAlbum = { title -> viewModel.createAlbum(title) },
-                playerViewModel = playerViewModel
+                error = error,
+                playerController = playerController,
+                onRefresh = { viewModel.refreshContent() },
+                onDeleteAlbum = { albumId -> viewModel.deleteAlbum(albumId) },
+                onNavigateToAlbum = { albumId -> navController.navigate("album/$albumId") }
             )
             2 -> UploadTab(
-                albums = userAlbums,
-                onUpload = { title, albumId, uri -> viewModel.uploadSong(title, albumId, uri) },
-                onCreateAlbum = { title -> viewModel.createAlbum(title) },
+                viewModel = viewModel,
                 isLoading = isLoading,
-                uploadProgress = viewModel.uploadProgress.collectAsState().value,
-                uploadSuccess = viewModel.uploadSuccess.collectAsState().value,
-                onClearSuccess = { viewModel.clearUploadSuccess() }
+                uploadProgress = uploadProgress,
+                uploadSuccess = uploadSuccess
             )
         }
     }
@@ -144,111 +124,77 @@ fun ArtistScreen(
 
 @Composable
 private fun SongsTab(
-    songs: List<com.sn4s.muza.data.model.Song>,
+    songs: List<Song>,
     isLoading: Boolean,
-    onDeleteSong: (Int) -> Unit,
-    playerViewModel: PlayerController = hiltViewModel()
+    error: String?,
+    playerController: PlayerController,
+    onRefresh: () -> Unit,
+    onDeleteSong: (Int) -> Unit
 ) {
-    LazyColumn(
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+    when {
+        isLoading -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        error != null -> {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "Your Songs (${songs.size})",
-                    style = MaterialTheme.typography.titleLarge
+                    text = error,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.error
                 )
-                if (songs.isNotEmpty() && playerViewModel != null) {
-                    TextButton(
-                        onClick = { playerViewModel.playPlaylist(songs) }
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = onRefresh) {
+                    Text("Retry")
+                }
+            }
+        }
+        songs.isEmpty() -> {
+            EmptyArtistSongsState()
+        }
+        else -> {
+            LazyColumn {
+                // Songs header with play all
+                item {
+                    SongsHeader(
+                        songCount = songs.size,
+                        onPlayAll = { playerController.playPlaylist(songs) },
+                        onShuffle = { playerController.playShuffled(songs) }
+                    )
+                }
+
+                // Songs list
+                items(songs) { song ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            Icons.Default.PlayArrow,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Play All")
-                    }
-                }
-            }
-        }
-
-        if (isLoading) {
-            item {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-        }
-
-        if (songs.isEmpty() && !isLoading) {
-            item {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            Icons.Default.MusicNote,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "No songs uploaded yet",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "Upload your first song using the Upload tab",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-        }
-
-        items(songs) { song ->
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = song.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = "${song.likeCount} likes",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    IconButton(onClick = { playerViewModel?.playSong(song) }) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = "Play")
-                    }
-
-                    IconButton(onClick = { onDeleteSong(song.id) }) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Delete",
-                            tint = MaterialTheme.colorScheme.error
-                        )
+                        Box(modifier = Modifier.weight(1f)) {
+                            USongItem(
+                                song = song,
+                                collectionSongs = songs,
+                                playbackMode = PlaybackMode.FROM_COLLECTION
+                            )
+                        }
+                        IconButton(onClick = { onDeleteSong(song.id) }) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "Delete song",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             }
@@ -258,218 +204,95 @@ private fun SongsTab(
 
 @Composable
 private fun AlbumsTab(
-    albums: List<com.sn4s.muza.data.model.Album>,
+    albums: List<Album>,
     isLoading: Boolean,
+    error: String?,
+    playerController: PlayerController,
+    onRefresh: () -> Unit,
     onDeleteAlbum: (Int) -> Unit,
-    onCreateAlbum: (String) -> Unit,
-    playerViewModel: PlayerController = hiltViewModel()
+    onNavigateToAlbum: (Int) -> Unit
 ) {
-    var showCreateDialog by remember { mutableStateOf(false) }
-
-    LazyColumn(
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+    when {
+        isLoading -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        error != null -> {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "Your Albums (${albums.size})",
-                    style = MaterialTheme.typography.titleLarge
+                    text = error,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.error
                 )
-                Button(onClick = { showCreateDialog = true }) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("New Album")
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = onRefresh) {
+                    Text("Retry")
                 }
             }
         }
-
-        if (isLoading) {
-            item {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
+        albums.isEmpty() -> {
+            EmptyAlbumsState()
         }
-
-        if (albums.isEmpty() && !isLoading) {
-            item {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            Icons.Default.Album,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "No albums created yet",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "Create your first album to organize your songs",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+        else -> {
+            LazyColumn {
+                item {
+                    AlbumsHeader(albumCount = albums.size)
                 }
-            }
-        }
 
-        items(albums) { album ->
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = album.title,
-                                style = MaterialTheme.typography.titleMedium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = "${album.songs.size} songs",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        Row {
-                            if (album.songs.isNotEmpty() && playerViewModel != null) {
-                                IconButton(
-                                    onClick = {
-                                        // Convert SongNested to Song - you might need to adjust this
-                                        val songs = album.songs.mapNotNull { songNested ->
-                                            // You'll need to implement this conversion
-                                            // or modify your data models
-                                            null // Placeholder
-                                        }
-                                        // playerViewModel.playPlaylist(songs)
-                                    }
-                                ) {
-                                    Icon(Icons.Default.PlayArrow, contentDescription = "Play Album")
-                                }
-                            }
-
-                            IconButton(onClick = { onDeleteAlbum(album.id) }) {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = "Delete",
-                                    tint = MaterialTheme.colorScheme.error
+                items(albums) { album ->
+                    AlbumItem(
+                        album = album,
+                        onPlayAlbum = {
+                            // Convert SongNested to Song for playback
+                            val playableSongs = album.songs.map { nested ->
+                                Song(
+                                    id = nested.id,
+                                    title = nested.title,
+                                    duration = nested.duration,
+                                    filePath = nested.filePath,
+                                    createdAt = nested.createdAt,
+                                    albumId = album.id,
+                                    creatorId = album.creatorId,
+                                    creator = nested.creator,
+                                    likeCount = 0,
+                                    //album = null,
+                                    //genres = emptyList(),
+                                    //playlists = emptyList()
                                 )
                             }
-                        }
-                    }
-
-                    if (album.songs.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(album.songs.take(3)) { song ->
-                                Card(
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                                    )
-                                ) {
-                                    Text(
-                                        text = song.title,
-                                        modifier = Modifier.padding(8.dp),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        maxLines = 1
-                                    )
-                                }
+                            if (playableSongs.isNotEmpty()) {
+                                playerController.playPlaylist(playableSongs)
                             }
-                            if (album.songs.size > 3) {
-                                item {
-                                    Card(
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                                        )
-                                    ) {
-                                        Text(
-                                            text = "+${album.songs.size - 3} more",
-                                            modifier = Modifier.padding(8.dp),
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+                        },
+                        onDeleteAlbum = { onDeleteAlbum(album.id) },
+                        onNavigateToAlbum = { onNavigateToAlbum(album.id) }
+                    )
                 }
             }
         }
-    }
-
-    if (showCreateDialog) {
-        var albumTitle by remember { mutableStateOf("") }
-
-        AlertDialog(
-            onDismissRequest = { showCreateDialog = false },
-            title = { Text("Create New Album") },
-            text = {
-                OutlinedTextField(
-                    value = albumTitle,
-                    onValueChange = { albumTitle = it },
-                    label = { Text("Album Title") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (albumTitle.isNotBlank()) {
-                            onCreateAlbum(albumTitle)
-                            showCreateDialog = false
-                        }
-                    },
-                    enabled = albumTitle.isNotBlank()
-                ) {
-                    Text("Create")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCreateDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun UploadTab(
-    albums: List<com.sn4s.muza.data.model.Album>,
-    onUpload: (String, Int?, Uri) -> Unit,
-    onCreateAlbum: (String) -> Unit,
+    viewModel: ArtistViewModel,
     isLoading: Boolean,
     uploadProgress: Float,
-    uploadSuccess: Boolean,
-    onClearSuccess: () -> Unit
+    uploadSuccess: Boolean
 ) {
-    var title by remember { mutableStateOf("") }
-    var selectedAlbumId by remember { mutableStateOf<Int?>(null) }
     var selectedAudioUri by remember { mutableStateOf<Uri?>(null) }
-    var showCreateAlbumDialog by remember { mutableStateOf(false) }
-    var newAlbumTitle by remember { mutableStateOf("") }
+    var songTitle by remember { mutableStateOf("") }
+    var selectedAlbumId by remember { mutableStateOf<Int?>(null) }
 
     val audioPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -479,10 +302,10 @@ private fun UploadTab(
 
     LaunchedEffect(uploadSuccess) {
         if (uploadSuccess) {
-            title = ""
-            selectedAlbumId = null
             selectedAudioUri = null
-            onClearSuccess()
+            songTitle = ""
+            selectedAlbumId = null
+            viewModel.refreshContent()
         }
     }
 
@@ -492,222 +315,334 @@ private fun UploadTab(
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        Text(
-            text = "Upload New Song",
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
-
-        OutlinedTextField(
-            value = title,
-            onValueChange = { title = it },
-            label = { Text("Song Title") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            enabled = !isLoading
-        )
-
-        // Album Selection
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Card(
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text(
-                text = "Album:",
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(end = 16.dp)
-            )
-
-            var expanded by remember { mutableStateOf(false) }
-
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = !expanded },
-                modifier = Modifier.weight(1f)
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                OutlinedTextField(
-                    value = albums.find { it.id == selectedAlbumId }?.title ?: "No Album",
-                    onValueChange = {},
-                    readOnly = true,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                Text(
+                    text = "Upload New Song",
+                    style = MaterialTheme.typography.headlineSmall
+                )
+
+                // Audio file selection
+                OutlinedCard(
                     modifier = Modifier
-                        .menuAnchor()
-                        .fillMaxWidth(),
-                    enabled = !isLoading
-                )
-
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
+                        .fillMaxWidth()
+                        .clickable { audioPickerLauncher.launch("audio/*") }
                 ) {
-                    DropdownMenuItem(
-                        text = { Text("No Album") },
-                        onClick = {
-                            selectedAlbumId = null
-                            expanded = false
-                        }
-                    )
-                    albums.forEach { album ->
-                        DropdownMenuItem(
-                            text = { Text(album.title) },
-                            onClick = {
-                                selectedAlbumId = album.id
-                                expanded = false
-                            }
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            if (selectedAudioUri != null) Icons.Default.AudioFile else Icons.Default.CloudUpload,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.primary
                         )
-                    }
-                }
-            }
-
-            TextButton(
-                onClick = { showCreateAlbumDialog = true },
-                enabled = !isLoading
-            ) {
-                Text("New Album")
-            }
-        }
-
-        // Audio File Selection
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            onClick = { audioPickerLauncher.launch("audio/*") },
-            enabled = !isLoading
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AudioFile,
-                    contentDescription = "Select Audio File",
-                    modifier = Modifier.padding(end = 16.dp)
-                )
-                Column {
-                    Text(
-                        text = if (selectedAudioUri != null) "Audio file selected" else "Select audio file",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    if (selectedAudioUri != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = selectedAudioUri.toString().substringAfterLast("/"),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = if (selectedAudioUri != null) "Audio file selected" else "Select audio file",
+                            style = MaterialTheme.typography.bodyLarge
                         )
+                        if (selectedAudioUri != null) {
+                            Text(
+                                text = selectedAudioUri.toString().substringAfterLast("/"),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
-            }
-        }
 
-        // Upload Progress
-        if (isLoading) {
-            LinearProgressIndicator(
-                progress = uploadProgress,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp)
-            )
-            Text(
-                text = "Uploading... ${(uploadProgress * 100).toInt()}%",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-        }
+                // Song title
+                OutlinedTextField(
+                    value = songTitle,
+                    onValueChange = { songTitle = it },
+                    label = { Text("Song Title") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
 
-        // Upload Button
-        Button(
-            onClick = {
-                selectedAudioUri?.let { uri ->
-                    onUpload(title, selectedAlbumId, uri)
+                // Upload progress
+                if (isLoading) {
+                    LinearProgressIndicator(
+                        progress = uploadProgress,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(
+                        text = "Uploading... ${(uploadProgress * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !isLoading && title.isNotBlank() && selectedAudioUri != null
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.Default.Upload,
-                    contentDescription = "Upload",
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-                Text("Upload Song")
-            }
-        }
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Upload Tips
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Upload Tips",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Text(
-                    text = "• Supported formats: MP3, WAV, FLAC, M4A, OGG",
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
-                Text(
-                    text = "• Maximum file size: 50MB",
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
+                // Upload button
+                Button(
+                    onClick = {
+                        selectedAudioUri?.let { uri ->
+                            viewModel.uploadSong(
+                                audioFileUri = uri,
+                                title = songTitle,
+                                albumId = selectedAlbumId
+                            )
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = selectedAudioUri != null && songTitle.isNotBlank() && !isLoading
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Icon(Icons.Default.CloudUpload, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Upload Song")
+                    }
+                }
             }
         }
     }
+}
 
-    // Create Album Dialog
-    if (showCreateAlbumDialog) {
-        AlertDialog(
-            onDismissRequest = { showCreateAlbumDialog = false },
-            title = { Text("Create New Album") },
-            text = {
-                OutlinedTextField(
-                    value = newAlbumTitle,
-                    onValueChange = { newAlbumTitle = it },
-                    label = { Text("Album Title") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (newAlbumTitle.isNotBlank()) {
-                            onCreateAlbum(newAlbumTitle)
-                            newAlbumTitle = ""
-                            showCreateAlbumDialog = false
-                        }
-                    },
-                    enabled = newAlbumTitle.isNotBlank()
-                ) {
-                    Text("Create")
+@Composable
+private fun SongsHeader(
+    songCount: Int,
+    onPlayAll: () -> Unit,
+    onShuffle: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(
+                text = "Your Songs",
+                style = MaterialTheme.typography.titleLarge
+            )
+            Text(
+                text = "$songCount songs",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        if (songCount > 0) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = onPlayAll) {
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Play All")
                 }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showCreateAlbumDialog = false }
-                ) {
-                    Text("Cancel")
+                TextButton(onClick = onShuffle) {
+                    Icon(
+                        Icons.Default.Shuffle,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Shuffle")
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun AlbumsHeader(albumCount: Int) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Your Albums",
+            style = MaterialTheme.typography.titleLarge
+        )
+        Text(
+            text = "$albumCount albums",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun AlbumItem(
+    album: Album,
+    onPlayAlbum: () -> Unit,
+    onDeleteAlbum: () -> Unit,
+    onNavigateToAlbum: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clickable { onNavigateToAlbum() }
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = album.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    val dateFormat = SimpleDateFormat("MMM yyyy", Locale.getDefault())
+                    Text(
+                        text = try {
+                            // Parse ISO date string like "2024-01-15T10:30:00"
+                            val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+                            val outputFormat = SimpleDateFormat("MMM yyyy", Locale.getDefault())
+                            val date = inputFormat.parse(album.releaseDate)
+                            outputFormat.format(date ?: Date())
+                        } catch (e: Exception) {
+                            // Fallback to just showing the year if parsing fails
+                            album.releaseDate.substringBefore('-')
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Text(
+                        text = "${album.songs.size} songs",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Row {
+                    if (album.songs.isNotEmpty()) {
+                        IconButton(onClick = onPlayAlbum) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = "Play Album")
+                        }
+                    }
+
+                    IconButton(onClick = onDeleteAlbum) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+
+            if (album.songs.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(album.songs.take(3)) { song ->
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        ) {
+                            Text(
+                                text = song.title,
+                                modifier = Modifier.padding(8.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                    if (album.songs.size > 3) {
+                        item {
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                )
+                            ) {
+                                Text(
+                                    text = "+${album.songs.size - 3} more",
+                                    modifier = Modifier.padding(8.dp),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyArtistSongsState() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            Icons.Default.MusicNote,
+            contentDescription = null,
+            modifier = Modifier.size(80.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "No songs uploaded yet",
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = "Upload your first song to get started",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+        )
+    }
+}
+
+@Composable
+private fun EmptyAlbumsState() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            Icons.Default.Album,
+            contentDescription = null,
+            modifier = Modifier.size(80.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "No albums created yet",
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = "Create your first album to organize your songs",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
         )
     }
 }

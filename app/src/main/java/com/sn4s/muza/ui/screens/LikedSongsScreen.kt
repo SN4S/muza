@@ -1,6 +1,5 @@
 package com.sn4s.muza.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -10,57 +9,49 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import androidx.navigation.compose.currentBackStackEntryAsState
 import com.sn4s.muza.data.model.Song
-import com.sn4s.muza.di.NetworkModule
+import com.sn4s.muza.ui.components.PlaybackMode
 import com.sn4s.muza.ui.components.USongItem
-import com.sn4s.muza.ui.viewmodels.LibraryViewModel
 import com.sn4s.muza.ui.viewmodels.PlayerController
-import com.sn4s.muza.ui.viewmodels.PlayerViewModel
+import com.sn4s.muza.ui.viewmodels.LibraryViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LikedSongsScreen(
     navController: NavController,
-    playerViewModel: PlayerController = hiltViewModel(),
-    viewModel: LibraryViewModel = hiltViewModel()
+    playerController: PlayerController = hiltViewModel(),
+    libraryViewModel: LibraryViewModel = hiltViewModel()
 ) {
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-    LaunchedEffect(Unit) {
-        NetworkModule.unauthorizedEvent.collect {
-            if (currentRoute != "login") {
-                navController.navigate("login") {
-                    popUpTo(0) { inclusive = true }
-                }
-            }
-        }
-    }
+    val likedSongs by libraryViewModel.likedSongs.collectAsStateWithLifecycle()
+    val isLoading by libraryViewModel.isLoading.collectAsStateWithLifecycle()
+    val error by libraryViewModel.error.collectAsStateWithLifecycle()
 
-    val likedSongs by viewModel.likedSongs.collectAsState()
     var sortBy by remember { mutableStateOf(LikedSongsSortOption.RECENTLY_ADDED) }
     var showSortMenu by remember { mutableStateOf(false) }
 
+    // Sort songs based on selected option
     val sortedSongs = remember(likedSongs, sortBy) {
         when (sortBy) {
-            LikedSongsSortOption.RECENTLY_ADDED -> likedSongs // Assuming they come in recent order
+            LikedSongsSortOption.RECENTLY_ADDED -> likedSongs.sortedByDescending { it.id }
             LikedSongsSortOption.ALPHABETICAL -> likedSongs.sortedBy { it.title }
             LikedSongsSortOption.ARTIST -> likedSongs.sortedBy { it.creator.username }
         }
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        // Top App Bar
+    // Load liked songs when screen opens
+    LaunchedEffect(Unit) {
+        libraryViewModel.loadLikedSongs()
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { },
+            title = { Text("Liked Songs") },
             navigationIcon = {
                 IconButton(onClick = { navController.popBackStack() }) {
                     Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -101,70 +92,69 @@ fun LikedSongsScreen(
             )
         )
 
-        LazyColumn {
-            // Header Section
-            item {
-                LikedSongsHeader(
-                    songCount = likedSongs.size,
-                    onPlayAll = {
-                        if (sortedSongs.isNotEmpty()) {
-                            playerViewModel?.playPlaylist(sortedSongs)
-                        }
-                    },
-                    onShuffle = {
-                        if (sortedSongs.isNotEmpty()) {
-                            playerViewModel?.playPlaylist(sortedSongs.shuffled())
-                        }
-                    }
-                )
+        when {
+            isLoading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
             }
-
-            // Songs List
-            if (sortedSongs.isEmpty()) {
-                item {
-                    LikedSongsEmptyState()
-                }
-            } else {
-                item {
-                    // Section info
-                    Padding(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = when (sortBy) {
-                                    LikedSongsSortOption.RECENTLY_ADDED -> "Recently liked"
-                                    LikedSongsSortOption.ALPHABETICAL -> "A to Z"
-                                    LikedSongsSortOption.ARTIST -> "By artist"
-                                },
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-
-                            Text(
-                                text = "${sortedSongs.size} songs",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-
-                itemsIndexed(sortedSongs) { index, song ->
-                    SongItemWithIndex(
-                        song = song,
-                        index = index + 1,
-                        playerViewModel = playerViewModel,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
+            error != null -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = error!!,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.error
                     )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = { libraryViewModel.loadLikedSongs() }) {
+                        Text("Retry")
+                    }
                 }
             }
+            else -> {
+                LazyColumn {
+                    // Header Section
+                    item {
+                        LikedSongsHeader(
+                            songCount = likedSongs.size,
+                            onPlayAll = {
+                                if (sortedSongs.isNotEmpty()) {
+                                    playerController.playPlaylist(sortedSongs)
+                                }
+                            },
+                            onShuffle = {
+                                if (sortedSongs.isNotEmpty()) {
+                                    playerController.playShuffled(sortedSongs)
+                                }
+                            }
+                        )
+                    }
 
-            // Bottom padding for mini player
-            item {
-                Spacer(modifier = Modifier.height(80.dp))
+                    // Songs List
+                    if (sortedSongs.isEmpty()) {
+                        item {
+                            LikedSongsEmptyState()
+                        }
+                    } else {
+                        itemsIndexed(sortedSongs) { index, song ->
+                            IndexedSongItem(
+                                index = index + 1,
+                                song = song,
+                                collectionSongs = sortedSongs,
+                                playbackMode = PlaybackMode.FROM_COLLECTION
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -174,116 +164,51 @@ fun LikedSongsScreen(
 private fun LikedSongsHeader(
     songCount: Int,
     onPlayAll: () -> Unit,
-    onShuffle: () -> Unit
+    onShuffle: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Box(
-        modifier = Modifier
+    Column(
+        modifier = modifier
             .fillMaxWidth()
-            .height(280.dp)
+            .padding(16.dp)
     ) {
-        // Gradient background
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-        ) {
-            Card(
-                modifier = Modifier.fillMaxSize(),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.Transparent
-                )
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .then(
-                            Modifier.background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                        Color.Transparent
-                                    )
-                                )
-                            )
-                        )
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        // Large heart icon
-                        Card(
-                            modifier = Modifier.size(120.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Default.Favorite,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(60.dp),
-                                    tint = MaterialTheme.colorScheme.onPrimary
-                                )
-                            }
-                        }
+        Icon(
+            Icons.Default.Favorite,
+            contentDescription = null,
+            modifier = Modifier.size(80.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "Liked Songs",
+            style = MaterialTheme.typography.headlineLarge
+        )
+        Text(
+            text = "$songCount songs",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
 
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Text(
-                            text = "Liked Songs",
-                            style = MaterialTheme.typography.headlineLarge,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-
-                        Text(
-                            text = "$songCount songs",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        // Play buttons
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Button(
-                                onClick = onPlayAll,
-                                enabled = songCount > 0,
-                                modifier = Modifier.height(48.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.PlayArrow,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Play")
-                            }
-
-                            OutlinedButton(
-                                onClick = onShuffle,
-                                enabled = songCount > 0,
-                                modifier = Modifier.height(48.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.Shuffle,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Shuffle")
-                            }
-                        }
-                    }
+        if (songCount > 0) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onPlayAll) {
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Play All")
+                }
+                OutlinedButton(onClick = onShuffle) {
+                    Icon(
+                        Icons.Default.Shuffle,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Shuffle")
                 }
             }
         }
@@ -291,14 +216,17 @@ private fun LikedSongsHeader(
 }
 
 @Composable
-private fun SongItemWithIndex(
-    song: Song,
+private fun IndexedSongItem(
     index: Int,
-    playerViewModel: PlayerController = hiltViewModel(),
+    song: Song,
+    collectionSongs: List<Song>,
+    playbackMode: PlaybackMode,
     modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Index number
@@ -316,6 +244,8 @@ private fun SongItemWithIndex(
         Box(modifier = Modifier.weight(1f)) {
             USongItem(
                 song = song,
+                collectionSongs = collectionSongs,
+                playbackMode = playbackMode
             )
         }
     }
@@ -354,16 +284,6 @@ private fun LikedSongsEmptyState() {
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
             textAlign = TextAlign.Center
         )
-    }
-}
-
-@Composable
-private fun Padding(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    Box(modifier = modifier) {
-        content()
     }
 }
 

@@ -1,6 +1,5 @@
 package com.sn4s.muza.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -15,7 +14,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.sn4s.muza.ui.viewmodels.PlayerController
-import com.sn4s.muza.ui.viewmodels.PlayerViewModel
 
 @Composable
 fun MiniPlayer(

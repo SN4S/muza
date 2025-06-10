@@ -24,7 +24,6 @@ import com.sn4s.muza.ui.components.CreatePlaylistDialog
 import com.sn4s.muza.ui.viewmodels.LibraryViewModel
 import com.sn4s.muza.ui.viewmodels.PlayerController
 import com.sn4s.muza.ui.viewmodels.PlaylistViewModel
-import com.sn4s.muza.ui.viewmodels.PlayerViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

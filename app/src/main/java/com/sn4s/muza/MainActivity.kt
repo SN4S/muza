@@ -265,7 +265,7 @@ fun SearchScreenWithPlayer(
         androidx.compose.foundation.layout.Box(
             modifier = androidx.compose.ui.Modifier.weight(1f)
         ) {
-            SearchScreen(navController, playerViewModel = playerViewModel)
+            SearchScreen(navController)
         }
         MiniPlayer(
             onClick = { navController.navigate("player") },
@@ -301,7 +301,7 @@ fun ArtistScreenWithPlayer(
         androidx.compose.foundation.layout.Box(
             modifier = androidx.compose.ui.Modifier.weight(1f)
         ) {
-            ArtistScreen(navController, playerViewModel = playerViewModel)
+            ArtistScreen(navController)
         }
         MiniPlayer(
             onClick = { navController.navigate("player") },

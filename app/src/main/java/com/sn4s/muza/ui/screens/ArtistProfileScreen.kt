@@ -3,7 +3,6 @@ package com.sn4s.muza.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -22,7 +21,6 @@ import com.sn4s.muza.ui.components.USongItem
 import com.sn4s.muza.ui.components.UserAvatar
 import com.sn4s.muza.ui.viewmodels.ArtistProfileViewModel
 import com.sn4s.muza.ui.viewmodels.PlayerController
-import com.sn4s.muza.ui.viewmodels.PlayerViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

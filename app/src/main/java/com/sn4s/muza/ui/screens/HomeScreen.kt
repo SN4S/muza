@@ -20,7 +20,6 @@ import com.sn4s.muza.ui.viewmodels.HomeViewModel
 import com.sn4s.muza.ui.components.USongItem
 import com.sn4s.muza.ui.viewmodels.LikeViewModel
 import com.sn4s.muza.ui.viewmodels.PlayerController
-import com.sn4s.muza.ui.viewmodels.PlayerViewModel
 
 @Composable
 fun HomeScreen(
