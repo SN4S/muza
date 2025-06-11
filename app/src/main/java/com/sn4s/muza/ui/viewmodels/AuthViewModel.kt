@@ -1,15 +1,17 @@
 package com.sn4s.muza.ui.viewmodels
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.sn4s.muza.data.model.Token
-import com.sn4s.muza.data.model.User
+import coil.imageLoader
 import com.sn4s.muza.data.model.UserCreate
 import com.sn4s.muza.data.repository.MusicRepository
+import com.sn4s.muza.data.repository.RecentlyPlayedRepository
 import com.sn4s.muza.data.security.TokenManager
 import com.sn4s.muza.player.MusicPlayerManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -18,7 +20,9 @@ import javax.inject.Inject
 class AuthViewModel @Inject constructor(
     private val repository: MusicRepository,
     private val tokenManager: TokenManager,
-    private val playerManager: MusicPlayerManager
+    private val playerManager: MusicPlayerManager,
+    private val recentlyPlayedRepository: RecentlyPlayedRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _isLoading = MutableStateFlow(false)
@@ -90,6 +94,12 @@ class AuthViewModel @Inject constructor(
 
     fun logout() {
         Log.d("AuthViewModel", "Logging out")
+        recentlyPlayedRepository.clearRecentlyPlayed()
+
+        // Clear image cache
+        val imageLoader = context.imageLoader
+        imageLoader.memoryCache?.clear()
+        imageLoader.diskCache?.clear()
         playerManager.stop()
         tokenManager.clearToken()
         _isAuthenticated.value = false

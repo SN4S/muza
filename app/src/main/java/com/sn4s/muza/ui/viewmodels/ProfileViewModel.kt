@@ -3,12 +3,15 @@ package com.sn4s.muza.ui.viewmodels
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import coil.imageLoader
 import com.sn4s.muza.data.model.User
 import com.sn4s.muza.data.model.UserUpdate
 import com.sn4s.muza.data.repository.MusicRepository
+import com.sn4s.muza.data.repository.RecentlyPlayedRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.*
@@ -19,6 +22,7 @@ import javax.inject.Inject
 class ProfileViewModel @Inject constructor(
     private val repository: MusicRepository,
     private val savedStateHandle: SavedStateHandle,
+    private val recentlyPlayedRepository: RecentlyPlayedRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -197,6 +201,14 @@ class ProfileViewModel @Inject constructor(
     )
 
     fun logout() {
+
+        // Clear recently played
+        recentlyPlayedRepository.clearRecentlyPlayed()
+
+        // Clear image cache
+        val imageLoader = context.imageLoader
+        imageLoader.memoryCache?.clear()
+        imageLoader.diskCache?.clear()
         viewModelScope.launch {
             repository.logout()
         }
