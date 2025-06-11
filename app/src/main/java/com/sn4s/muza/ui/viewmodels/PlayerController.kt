@@ -3,6 +3,7 @@ package com.sn4s.muza.ui.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sn4s.muza.data.model.Song
+import com.sn4s.muza.data.repository.RecentlyPlayedRepository
 import com.sn4s.muza.player.MusicPlayerManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -15,7 +16,8 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class PlayerController @Inject constructor(
-    private val playerManager: MusicPlayerManager
+    private val playerManager: MusicPlayerManager,
+    private val recentlyPlayedRepository: RecentlyPlayedRepository
 ) : ViewModel() {
 
     // === Direct State Access ===
@@ -29,6 +31,8 @@ class PlayerController @Inject constructor(
     val queueIndex: StateFlow<Int> = playerManager.queueIndex
     val isShuffled: StateFlow<Boolean> = playerManager.isShuffled
     val repeatMode: StateFlow<MusicPlayerManager.RepeatMode> = playerManager.repeatMode
+
+    val recentlyPlayed: StateFlow<List<Song>> = recentlyPlayedRepository.recentlyPlayed
 
     // === UI State ===
     private val _error = MutableStateFlow<String?>(null)
@@ -81,6 +85,7 @@ class PlayerController @Inject constructor(
      */
     fun playSong(song: Song) = executeWithErrorHandling("play song") {
         playerManager.playSong(song)
+        recentlyPlayedRepository.addSong(song)
     }
 
     /**
@@ -88,6 +93,9 @@ class PlayerController @Inject constructor(
      */
     fun playPlaylist(songs: List<Song>, startIndex: Int = 0) = executeWithLoadingAndErrorHandling("play playlist") {
         playerManager.playPlaylist(songs, startIndex)
+        songs.getOrNull(startIndex)?.let { song ->
+            recentlyPlayedRepository.addSong(song)
+        }
     }
 
     /**
@@ -154,14 +162,31 @@ class PlayerController @Inject constructor(
 
     fun skipToNext() = executeWithErrorHandling("skip to next") {
         playerManager.skipToNext()
+        currentSong.value?.let { song ->
+            recentlyPlayedRepository.addSong(song)
+        }
     }
 
     fun skipToPrevious() = executeWithErrorHandling("skip to previous") {
         playerManager.skipToPrevious()
+        currentSong.value?.let { song ->
+            recentlyPlayedRepository.addSong(song)
+        }
     }
 
     fun seekToIndex(index: Int) = executeWithErrorHandling("seek to song") {
         playerManager.seekToIndex(index)
+        queue.value.getOrNull(index)?.let { song ->
+            recentlyPlayedRepository.addSong(song)
+        }
+    }
+
+    fun clearRecentlyPlayed() {
+        recentlyPlayedRepository.clearRecentlyPlayed()
+    }
+
+    fun getRecentlyPlayedList(): List<Song> {
+        return recentlyPlayedRepository.getRecentlyPlayedList()
     }
 
     fun playFromQueue(index: Int) = seekToIndex(index)

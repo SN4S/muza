@@ -92,6 +92,10 @@ fun MainScreen() {
                 )
             }
 
+            composable("recently_played") {
+                RecentlyPlayedScreenWithPlayer(navController)
+            }
+
             composable("playlist/{playlistId}") { backStackEntry ->
                 val playlistId = backStackEntry.arguments?.getString("playlistId")?.toIntOrNull() ?: 0
                 PlaylistDetailScreenWithPlayer(navController, playlistId)
@@ -155,6 +159,24 @@ fun HomeScreenWithPlayer(
             modifier = androidx.compose.ui.Modifier.weight(1f)
         ) {
             HomeScreen(navController, playerViewModel = playerViewModel)
+        }
+        MiniPlayer(
+            onClick = { navController.navigate("player") },
+            viewModel = playerViewModel
+        )
+    }
+}
+
+@Composable
+fun RecentlyPlayedScreenWithPlayer(
+    navController: androidx.navigation.NavController,
+    playerViewModel: PlayerController = hiltViewModel()
+) {
+    androidx.compose.foundation.layout.Column {
+        androidx.compose.foundation.layout.Box(
+            modifier = androidx.compose.ui.Modifier.weight(1f)
+        ) {
+            RecentlyPlayedScreen(navController, playerViewModel)
         }
         MiniPlayer(
             onClick = { navController.navigate("player") },
