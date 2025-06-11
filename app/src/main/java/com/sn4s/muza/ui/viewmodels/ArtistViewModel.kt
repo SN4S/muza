@@ -134,7 +134,7 @@ class ArtistViewModel @Inject constructor(
                 val uploadedSong = repository.createSong(
                     title = title,
                     file = audioFile,
-                    cover = coverFile, // Pass cover file
+                    cover = coverFile,
                     albumId = albumId,
                     genreIds = null
                 )
@@ -169,7 +169,7 @@ class ArtistViewModel @Inject constructor(
         }
     }
 
-    fun createAlbum(title: String, releaseDate: String? = null,coverUri: Uri? = null) {
+    fun createAlbum(title: String, releaseDate: String? = null, coverUri: Uri? = null) {
         if (title.isBlank()) {
             _error.value = "Album title cannot be empty"
             return
@@ -182,6 +182,7 @@ class ArtistViewModel @Inject constructor(
             try {
                 Log.d("ArtistViewModel", "Creating album: $title")
 
+                // Create cover file if URI provided
                 var coverFile: File? = null
                 if (coverUri != null) {
                     coverFile = createFileFromUri(coverUri)
@@ -190,20 +191,18 @@ class ArtistViewModel @Inject constructor(
                         coverFile = null
                     }
                 }
-                // Use the correct method signature from MusicRepository
+
                 val createdAlbum = repository.createAlbum(
                     title = title,
                     releaseDate = releaseDate ?: LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
-                    cover = coverFile // No cover support in create album for now
+                    cover = coverFile
                 )
 
                 Log.d("ArtistViewModel", "Album created successfully: ${createdAlbum.title}")
 
-                try {
-                    coverFile?.delete()
-                } catch (e: Exception) {
-                    Log.w("ArtistViewModel", "Could not delete temp files", e)
-                }
+                // Clean up temp file
+                coverFile?.delete()
+
                 loadUserAlbums()
 
             } catch (e: Exception) {

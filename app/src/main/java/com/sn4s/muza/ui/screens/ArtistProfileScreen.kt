@@ -21,6 +21,7 @@ import com.sn4s.muza.ui.components.USongItem
 import com.sn4s.muza.ui.components.UserAvatar
 import com.sn4s.muza.ui.viewmodels.ArtistProfileViewModel
 import com.sn4s.muza.ui.viewmodels.PlayerController
+import com.sn4s.muza.ui.viewmodels.ProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,10 +29,12 @@ fun ArtistProfileScreen(
     navController: NavController,
     artistId: Int,
     playerViewModel: PlayerController? = null,
-    viewModel: ArtistProfileViewModel = hiltViewModel()
+    viewModel: ArtistProfileViewModel = hiltViewModel(),
+    profileViewModel: ProfileViewModel = hiltViewModel()
 ) {
     // Handle unauthorized like your other screens
     val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentUser by profileViewModel.user.collectAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     LaunchedEffect(Unit) {
         NetworkModule.unauthorizedEvent.collect {
@@ -124,7 +127,8 @@ fun ArtistProfileScreen(
                             EnhancedProfileCard(
                                 profile = userProfile!!,
                                 followStatus = followStatus,
-                                onFollowClick = { viewModel.toggleFollow(artistId) }
+                                onFollowClick = { viewModel.toggleFollow(artistId) },
+                                currentUser = currentUser?.id
                             )
                         } else {
                             // Basic profile (fallback for when social features aren't available)
@@ -249,7 +253,8 @@ fun ArtistProfileScreen(
 fun EnhancedProfileCard(
     profile: UserProfile,
     followStatus: FollowResponse?,
-    onFollowClick: () -> Unit
+    onFollowClick: () -> Unit,
+    currentUser: Int?,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -259,27 +264,6 @@ fun EnhancedProfileCard(
             modifier = Modifier.padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Avatar
-//            Card(
-//                modifier = Modifier.size(120.dp),
-//                shape = CircleShape,
-//                colors = CardDefaults.cardColors(
-//                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-//                )
-//            ) {
-//                Box(
-//                    modifier = Modifier.fillMaxSize(),
-//                    contentAlignment = Alignment.Center
-//                ) {
-//                    Icon(
-//                        imageVector = Icons.Default.Person,
-//                        contentDescription = "Avatar",
-//                        modifier = Modifier.size(60.dp),
-//                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-//                    )
-//                }
-//            }
-
             UserAvatar(
                 userId = profile.id,
                 username = profile.username,
@@ -347,16 +331,19 @@ fun EnhancedProfileCard(
 
             // Follow button
             followStatus?.let { status ->
-                Button(
-                    onClick = onFollowClick,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = if (status.isFollowing) Icons.Default.PersonRemove else Icons.Default.PersonAdd,
-                        contentDescription = null
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(if (status.isFollowing) "Unfollow" else "Follow")
+                // Only show follow button if this isn't the current user's profile
+                if (profile.id != currentUser) {  // Add this check
+                    Button(
+                        onClick = onFollowClick,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = if (status.isFollowing) Icons.Default.PersonRemove else Icons.Default.PersonAdd,
+                            contentDescription = null
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(if (status.isFollowing) "Unfollow" else "Follow")
+                    }
                 }
             }
         }
@@ -374,27 +361,6 @@ fun BasicProfileCard(artist: UserNested) {
             modifier = Modifier.padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Avatar
-//            Card(
-//                modifier = Modifier.size(120.dp),
-//                shape = CircleShape,
-//                colors = CardDefaults.cardColors(
-//                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-//                )
-//            ) {
-//                Box(
-//                    modifier = Modifier.fillMaxSize(),
-//                    contentAlignment = Alignment.Center
-//                ) {
-//                    Icon(
-//                        imageVector = Icons.Default.Person,
-//                        contentDescription = "Avatar",
-//                        modifier = Modifier.size(60.dp),
-//                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-//                    )
-//                }
-//            }
-
             UserAvatar(
                 userNested = artist,
                 size = 120.dp

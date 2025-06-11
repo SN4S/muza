@@ -115,11 +115,7 @@ fun ArtistScreen(
                 playerController = playerController,
                 navController = navController,
                 onQuickUpload = { viewModel.setSelectedTab(4) },
-                onCreateAlbum = { title, coverUri ->
-                    // TODO: Update ArtistViewModel.createAlbum to accept coverUri parameter
-                    // For now, just create album without cover
-                    viewModel.createAlbum(title)
-                },
+                onCreateAlbum = { title, coverUri -> viewModel.createAlbum(title = title, coverUri = coverUri)},
                 onViewAnalytics = { viewModel.setSelectedTab(3) }
             )
             1 -> SongsTab(
@@ -135,11 +131,7 @@ fun ArtistScreen(
                 error = error,
                 navController = navController,
                 onDeleteAlbum = { albumId -> viewModel.deleteAlbum(albumId) },
-                onCreateAlbum = { title, coverUri ->
-                    // TODO: Update ArtistViewModel.createAlbum to accept coverUri parameter
-                    // For now, just create album without cover
-                    viewModel.createAlbum(title)
-                }
+                onCreateAlbum = { title, coverUri -> viewModel.createAlbum(title = title, coverUri = coverUri) }
             )
             3 -> AnalyticsTab(
                 songs = userSongs,
@@ -216,7 +208,7 @@ private fun OverviewTab(
                         QuickActionButton(
                             title = "Create Album",
                             icon = Icons.Default.Album,
-                            onClick = { /* Show create album dialog */ }
+                            onClick = { onCreateAlbum }
                         )
                         QuickActionButton(
                             title = "View Analytics",
@@ -480,35 +472,24 @@ private fun SongsTab(
                 }
 
                 if (songs.isNotEmpty()) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+                    Row {
                         FilledTonalButton(
                             onClick = {
                                 playerController.playShuffledFromCollection(songs, songs.random())
-                            },
-                            modifier = Modifier.weight(1f)
+                            }
                         ) {
-                            Icon(
-                                Icons.Default.Shuffle,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(Icons.Default.Shuffle, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text("Shuffle")
                         }
+                        Spacer(modifier = Modifier.width(8.dp))
                         Button(
                             onClick = {
                                 playerController.playFromCollectionStartingAt(songs, songs.first())
-                            },
-                            modifier = Modifier.weight(1f)
+                            }
                         ) {
-                            Icon(
-                                Icons.Default.PlayArrow,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(Icons.Default.PlayArrow, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text("Play All")
                         }
                     }
@@ -577,7 +558,7 @@ private fun SongItem(
                 modifier = Modifier.size(56.dp),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                val coverUrl = song.coverImage?.let {
+                val coverUrl = song.coverImage.let {
                     "${NetworkModule.BASE_URL}songs/${song.id}/cover"
                 }
 
