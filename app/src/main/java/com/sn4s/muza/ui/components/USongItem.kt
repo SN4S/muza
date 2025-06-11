@@ -298,16 +298,9 @@ fun USongItem(
 
     // Add to playlist dialog
     if (showAddToPlaylistDialog) {
-        // TODO: Implement AddToPlaylistDialog
-        AlertDialog(
-            onDismissRequest = { showAddToPlaylistDialog = false },
-            title = { Text("Add to Playlist") },
-            text = { Text("This feature will be implemented soon.") },
-            confirmButton = {
-                TextButton(onClick = { showAddToPlaylistDialog = false }) {
-                    Text("OK")
-                }
-            }
+        AddToPlaylistDialog(
+            songId = song.id,
+            onDismiss = { showAddToPlaylistDialog = false }
         )
     }
 }
