@@ -77,6 +77,74 @@ class ArtistViewModel @Inject constructor(
         }
     }
 
+    fun updateSong(
+        songId: Int,
+        title: String?,
+        albumId: Int?,
+        coverUri: Uri?
+    ) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+
+            try {
+                val coverFile = coverUri?.let { createFileFromUri(it) }
+
+                repository.updateSong(
+                    songId = songId,
+                    title = title,
+                    albumId = albumId,
+                    genreIds = null, // Don't update audio file in edit
+                    cover = coverFile
+                )
+
+                loadUserSongs() // Refresh songs
+                Log.d("ArtistViewModel", "Song updated successfully")
+
+            } catch (e: Exception) {
+                Log.e("ArtistViewModel", "Failed to update song", e)
+                _error.value = "Failed to update song: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun updateAlbum(
+        albumId: Int,
+        title: String?,
+        releaseDate: String?,
+        coverUri: Uri?
+    ) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+
+            try {
+                val coverFile = coverUri?.let { createFileFromUri(it) }
+
+                // Get the current album to use existing values if new ones are null
+                val currentAlbum = repository.getAlbum(albumId)
+
+                repository.updateAlbum(
+                    albumId = albumId,
+                    title = title ?: currentAlbum.title,
+                    releaseDate = releaseDate ?: currentAlbum.releaseDate ?: "",
+                    cover = coverFile
+                )
+
+                loadUserAlbums() // Refresh albums
+                Log.d("ArtistViewModel", "Album updated successfully")
+
+            } catch (e: Exception) {
+                Log.e("ArtistViewModel", "Failed to update album", e)
+                _error.value = "Failed to update album: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     private fun loadUserSongs() {
         viewModelScope.launch {
             try {

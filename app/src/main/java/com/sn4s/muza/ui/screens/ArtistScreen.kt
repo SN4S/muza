@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -114,7 +115,11 @@ fun ArtistScreen(
                 isLoading = isLoading,
                 error = error,
                 playerController = playerController,
-                onDeleteSong = { songId -> viewModel.deleteSong(songId) }
+                userAlbums = userAlbums,
+                onDeleteSong = { songId -> viewModel.deleteSong(songId) },
+                onEditSong = { songId, title, albumId, coverUri ->
+                    viewModel.updateSong(songId, title, albumId, coverUri)
+                }
             )
             2 -> AlbumsTab(
                 albums = userAlbums,
@@ -122,7 +127,10 @@ fun ArtistScreen(
                 error = error,
                 navController = navController,
                 onDeleteAlbum = { albumId -> viewModel.deleteAlbum(albumId) },
-                onCreateAlbum = { title, coverUri -> viewModel.createAlbum(title = title, coverUri = coverUri) }
+                onCreateAlbum = { title, coverUri -> viewModel.createAlbum(title = title, coverUri = coverUri) },
+                onEditAlbum = { albumId, title, releaseDate, coverUri ->
+                    viewModel.updateAlbum(albumId, title, releaseDate, coverUri)
+                }
             )
             3 -> UploadTab(
                 viewModel = viewModel,
@@ -276,7 +284,9 @@ private fun SongsTab(
     isLoading: Boolean,
     error: String?,
     playerController: PlayerController,
-    onDeleteSong: (Int) -> Unit
+    userAlbums: List<Album>,
+    onDeleteSong: (Int) -> Unit,
+    onEditSong: (Int, String?, Int?, Uri?) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         if (error != null) {
@@ -314,6 +324,7 @@ private fun SongsTab(
             ) {
                 items(songs) { song ->
                     var showDeleteDialog by remember { mutableStateOf(false) }
+                    var showEditDialog by remember { mutableStateOf(false) }
 
                     Card {
                         Row(
@@ -325,13 +336,41 @@ private fun SongsTab(
                             USongItem(
                                 song = song,
                                 modifier = Modifier.weight(1f),
+                                collectionSongs = songs,
+                                playbackMode = PlaybackMode.FROM_COLLECTION,
+                                showMoreOptions = false
                             )
 
-                            IconButton(onClick = { showDeleteDialog = true }) {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = "Delete",
-                                    tint = MaterialTheme.colorScheme.error
+                            Row {
+                                IconButton(
+                                    onClick = { showEditDialog = true }
+                                ) {
+                                    Icon(
+                                        Icons.Default.Edit,
+                                        contentDescription = "Edit",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { showDeleteDialog = true }
+                                ) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = "Delete",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+
+                            if (showEditDialog) {
+                                EditSongDialog(
+                                    song = song,
+                                    userAlbums = userAlbums,
+                                    onDismiss = { showEditDialog = false },
+                                    onConfirm = { title, albumId, coverUri ->
+                                        onEditSong(song.id,title, albumId, coverUri)
+                                        showEditDialog = false
+                                    }
                                 )
                             }
                         }
@@ -372,7 +411,8 @@ private fun AlbumsTab(
     error: String?,
     navController: NavController,
     onDeleteAlbum: (Int) -> Unit,
-    onCreateAlbum: (String, Uri?) -> Unit
+    onCreateAlbum: (String, Uri?) -> Unit,
+    onEditAlbum: (Int, String?, String?, Uri?) -> Unit
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
 
@@ -439,7 +479,10 @@ private fun AlbumsTab(
                     AlbumGridCard(
                         album = album,
                         onClick = { navController.navigate("album/${album.id}") },
-                        onDelete = { onDeleteAlbum(album.id) }
+                        onDelete = { onDeleteAlbum(album.id) },
+                        onEdit = { title, releaseDate, coverUri ->
+                            onEditAlbum(album.id, title, releaseDate, coverUri)
+                        }
                     )
                 }
             }
@@ -456,6 +499,248 @@ private fun AlbumsTab(
             }
         )
     }
+}
+
+@Composable
+private fun EditSongDialog(
+    song: Song,
+    userAlbums: List<Album>,
+    onDismiss: () -> Unit,
+    onConfirm: (String?, Int?, Uri?) -> Unit
+) {
+    var songTitle by remember { mutableStateOf(song.title) }
+    var selectedAlbumId by remember { mutableStateOf(song.albumId) }
+    var selectedCoverUri by remember { mutableStateOf<Uri?>(null) }
+    var showAlbumDropdown by remember { mutableStateOf(false) }
+
+    val coverPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri -> selectedCoverUri = uri }
+
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Song") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Song Title
+                OutlinedTextField(
+                    value = songTitle,
+                    onValueChange = { songTitle = it },
+                    label = { Text("Song Title") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Album Selection (Simple Button instead of dropdown)
+                val selectedAlbum = userAlbums.find { it.id == selectedAlbumId }
+                OutlinedButton(
+                    onClick = { showAlbumDropdown = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(selectedAlbum?.title ?: "No Album (Single)")
+                }
+
+                // Cover Image Section
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (selectedCoverUri != null)
+                            MaterialTheme.colorScheme.primaryContainer
+                        else
+                            MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (selectedCoverUri != null) "New cover selected" else "Update cover",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                text = if (selectedCoverUri != null) "New image ready" else "Optional",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Button(
+                            onClick = { coverPickerLauncher.launch("image/*") }
+                        ) {
+                            Text("Choose")
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(
+                        if (songTitle != song.title) songTitle else null,
+                        selectedAlbumId,
+                        selectedCoverUri
+                    )
+                }
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+
+    // Simple Album Selection Dialog
+    if (showAlbumDropdown) {
+        AlertDialog(
+            onDismissRequest = { showAlbumDropdown = false },
+            title = { Text("Select Album") },
+            text = {
+                LazyColumn {
+                    item {
+                        TextButton(
+                            onClick = {
+                                selectedAlbumId = null
+                                showAlbumDropdown = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("No Album (Single)")
+                        }
+                    }
+                    items(userAlbums) { album ->
+                        TextButton(
+                            onClick = {
+                                selectedAlbumId = album.id
+                                showAlbumDropdown = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(album.title)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAlbumDropdown = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun EditAlbumDialog(
+    album: Album,
+    onDismiss: () -> Unit,
+    onConfirm: (String?, String?, Uri?) -> Unit
+) {
+    var albumTitle by remember { mutableStateOf(album.title) }
+    var releaseDate by remember { mutableStateOf(album.releaseDate ?: "") }
+    var selectedCoverUri by remember { mutableStateOf<Uri?>(null) }
+
+    val coverPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri -> selectedCoverUri = uri }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Album") },
+        text = {
+            Column {
+                // Album Title
+                OutlinedTextField(
+                    value = albumTitle,
+                    onValueChange = { albumTitle = it },
+                    label = { Text("Album Title") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Release Date
+                OutlinedTextField(
+                    value = releaseDate,
+                    onValueChange = { releaseDate = it },
+                    label = { Text("Release Date (YYYY-MM-DD)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("2024-01-01") }
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Cover Image Section
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (selectedCoverUri != null)
+                            MaterialTheme.colorScheme.primaryContainer
+                        else
+                            MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (selectedCoverUri != null) "New cover selected" else "Update cover",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                text = if (selectedCoverUri != null) "New image ready" else "Optional",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Button(
+                            onClick = { coverPickerLauncher.launch("image/*") }
+                        ) {
+                            Text("Choose")
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(
+                        if (albumTitle != album.title) albumTitle else null,
+                        if (releaseDate.isNotBlank() && releaseDate != album.releaseDate) releaseDate else null,
+                        selectedCoverUri
+                    )
+                }
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
@@ -547,7 +832,8 @@ private fun CreateAlbumDialog(
 private fun AlbumGridCard(
     album: Album,
     onClick: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onEdit: (String?, String?, Uri?) -> Unit
 ) {
     val context = LocalContext.current
     val coverUrl = album.coverImage?.let {
@@ -596,13 +882,61 @@ private fun AlbumGridCard(
                         .align(Alignment.TopEnd)
                         .padding(8.dp)
                 ) {
-                    IconButton(
-                        onClick = { showDeleteDialog = true }
-                    ) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Delete",
-                            tint = MaterialTheme.colorScheme.error
+                    var showEditDialog by remember { mutableStateOf(false) }
+
+                    Row {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                                    CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            IconButton(
+                                onClick = { showEditDialog = true },
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Edit,
+                                    contentDescription = "Edit",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                                    CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            IconButton(
+                                onClick = { showDeleteDialog = true },
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "Delete",
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    if (showEditDialog) {
+                        EditAlbumDialog(
+                            album = album,
+                            onDismiss = { showEditDialog = false },
+                            onConfirm = { title, releaseDate, coverUri ->
+                                onEdit(title, releaseDate, coverUri)
+                                showEditDialog = false
+                            }
                         )
                     }
                 }

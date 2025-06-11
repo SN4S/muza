@@ -1,32 +1,44 @@
 package com.sn4s.muza.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.sn4s.muza.di.NetworkModule
 import com.sn4s.muza.player.MusicPlayerManager
+import com.sn4s.muza.ui.viewmodels.LikeViewModel
 import com.sn4s.muza.ui.viewmodels.PlayerController
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FullPlayerScreen(
     navController: NavController,
-    playerController: PlayerController = hiltViewModel()
+    playerController: PlayerController = hiltViewModel(),
+    likeViewModel: LikeViewModel = hiltViewModel()
 ) {
     val currentSong by playerController.currentSong.collectAsStateWithLifecycle()
     val isPlaying by playerController.isPlaying.collectAsStateWithLifecycle()
     val currentPosition by playerController.currentPosition.collectAsStateWithLifecycle()
     val duration by playerController.duration.collectAsStateWithLifecycle()
     val queue by playerController.queue.collectAsStateWithLifecycle()
+    val likedSongs by likeViewModel.likedSongs.collectAsStateWithLifecycle()
+    val isLiked = likedSongs.contains(currentSong?.id)
     val queueIndex by playerController.queueIndex.collectAsStateWithLifecycle()
     val isShuffled by playerController.isShuffled.collectAsStateWithLifecycle()
     val repeatMode by playerController.repeatMode.collectAsStateWithLifecycle()
@@ -64,7 +76,8 @@ fun FullPlayerScreen(
 
             Text(
                 text = "Now Playing",
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium
             )
 
             IconButton(onClick = { navController.navigate("queue") }) {
@@ -75,48 +88,92 @@ fun FullPlayerScreen(
             }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(32.dp))
 
-        // Song info
-        currentSong?.let { song ->
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(horizontal = 32.dp)
-            ) {
-                Text(
-                    text = song.title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+        // Large album artwork
+        val coverUrl = currentSong?.coverImage?.let {
+            "${NetworkModule.BASE_URL}songs/${currentSong?.id}/cover"
+        }
+
+        Card(
+            modifier = Modifier
+                .size(280.dp)
+                .padding(vertical = 32.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            if (coverUrl != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(coverUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = "Album cover",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(16.dp)),
+                    contentScale = ContentScale.Crop
                 )
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.MusicNote,
+                        contentDescription = null,
+                        modifier = Modifier.size(80.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
 
-                Spacer(modifier = Modifier.height(8.dp))
+        // Song information
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(horizontal = 24.dp)
+        ) {
+            Text(
+                text = currentSong?.title ?: "",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
 
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = currentSong?.creator?.username ?: "",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            if (queue.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = song.creator.username,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    text = "${queueIndex + 1} of ${queue.size}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
-        // Progress bar
-        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-            val progress = if (duration > 0) {
-                if (isDragging) dragPosition else (currentPosition.toFloat() / duration.toFloat())
-            } else 0f
-
+        // Progress bar and time
+        Column {
             Slider(
-                value = progress,
-                onValueChange = { newValue ->
+                value = if (isDragging) dragPosition else if (duration > 0) currentPosition.toFloat() / duration.toFloat() else 0f,
+                onValueChange = { value ->
                     isDragging = true
-                    dragPosition = newValue
+                    dragPosition = value
                 },
                 onValueChangeFinished = {
                     isDragging = false
@@ -200,45 +257,37 @@ fun FullPlayerScreen(
                 )
             }
 
+            val onLikeToggle = {
+                currentSong?.id?.let { songId ->
+                    likeViewModel.toggleLike(songId)
+                }
+                Unit
+            }
+
+            IconButton(onClick = onLikeToggle) {
+                Icon(
+                    imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = if (isLiked) "Unlike" else "Like",
+                )
+            }
+
             IconButton(onClick = { playerController.toggleRepeatMode() }) {
                 Icon(
                     imageVector = when (repeatMode) {
                         MusicPlayerManager.RepeatMode.ONE -> Icons.Default.RepeatOne
                         else -> Icons.Default.Repeat
                     },
-                    contentDescription = when (repeatMode) {
-                        MusicPlayerManager.RepeatMode.OFF -> "Repeat off"
-                        MusicPlayerManager.RepeatMode.ONE -> "Repeat one"
-                        MusicPlayerManager.RepeatMode.ALL -> "Repeat all"
-                    },
-                    tint = if (repeatMode != MusicPlayerManager.RepeatMode.OFF) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
+                    contentDescription = "Repeat",
+                    tint = if (repeatMode != MusicPlayerManager.RepeatMode.OFF) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Queue info
-        if (queue.size > 1) {
-            Text(
-                text = "Playing from queue (${queueIndex + 1} of ${queue.size})",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
     }
 }
 
-private fun formatTime(milliseconds: Long): String {
-    val seconds = (milliseconds / 1000).toInt()
-    val minutes = seconds / 60
-    val remainingSeconds = seconds % 60
-    return String.format("%d:%02d", minutes, remainingSeconds)
+private fun formatTime(timeMs: Long): String {
+    val totalSeconds = timeMs / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return String.format("%d:%02d", minutes, seconds)
 }
