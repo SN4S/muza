@@ -20,8 +20,8 @@ class LibraryViewModel @Inject constructor(
     private val _playlists = MutableStateFlow<List<Playlist>>(emptyList())
     val playlists: StateFlow<List<Playlist>> = _playlists
 
-    private val _albums = MutableStateFlow<List<Album>>(emptyList())
-    val albums: StateFlow<List<Album>> = _albums
+    private val _likedAlbums = MutableStateFlow<List<Album>>(emptyList())
+    val likedAlbums: StateFlow<List<Album>> = _likedAlbums
 
     private val _likedSongs = MutableStateFlow<List<Song>>(emptyList())
     val likedSongs: StateFlow<List<Song>> = _likedSongs
@@ -63,12 +63,12 @@ class LibraryViewModel @Inject constructor(
     private fun loadAlbums() {
         viewModelScope.launch {
             try {
-                repository.getUserAlbums()
+                repository.getLikedAlbums()
                     .catch { e ->
                         Log.e("LibraryViewModel", "Failed to load albums", e)
                     }
                     .collect { albums ->
-                        _albums.value = albums
+                        _likedAlbums.value = albums
                         Log.d("LibraryViewModel", "Loaded ${albums.size} albums")
                     }
             } catch (e: Exception) {

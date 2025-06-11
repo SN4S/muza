@@ -20,7 +20,6 @@ class LikeViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    // Keep track of checked songs to avoid duplicate API calls
     private val _checkedSongs = mutableSetOf<Int>()
 
     init {

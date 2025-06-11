@@ -494,6 +494,14 @@ private fun ArtistStatsCard(user: User) {
                     count = user.albums.size,
                     label = "Albums"
                 )
+                StatColumn(
+                    count = 0,
+                    label = "Likes"
+                )
+                StatColumn(
+                    count = 0,
+                    label = "Followers"
+                )
             }
         }
     }

@@ -1,7 +1,6 @@
 package com.sn4s.muza.data.repository
 
 import android.content.Context
-import android.net.Uri
 import com.sn4s.muza.data.model.*
 import com.sn4s.muza.data.network.ApiService
 import com.sn4s.muza.data.security.TokenManager
@@ -199,6 +198,22 @@ class MusicRepository @Inject constructor(
 
     fun getUserAlbums(skip: Int = 0, limit: Int = 100): Flow<List<Album>> = flow {
         emit(apiService.getCurrentUserAlbums(skip, limit))  // For current user
+    }
+
+    suspend fun likeAlbum(albumId: Int) {
+        apiService.likeAlbum(albumId)
+    }
+
+    suspend fun unlikeAlbum(albumId: Int) {
+        apiService.unlikeAlbum(albumId)
+    }
+
+    suspend fun isAlbumLiked(albumId: Int): Boolean {
+        return apiService.isAlbumLiked(albumId).isLiked
+    }
+
+    fun getLikedAlbums(skip: Int = 0, limit: Int = 100): Flow<List<Album>> = flow {
+        emit(apiService.getLikedAlbums(skip, limit))
     }
 
     suspend fun createAlbum(

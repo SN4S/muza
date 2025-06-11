@@ -20,11 +20,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.sn4s.muza.data.repository.MusicRepository
 import com.sn4s.muza.di.NetworkModule
 import com.sn4s.muza.ui.components.PlaybackMode
 import com.sn4s.muza.ui.components.USongItem
 import com.sn4s.muza.ui.viewmodels.AlbumDetailViewModel
+import com.sn4s.muza.ui.viewmodels.AlbumLikeViewModel
 import com.sn4s.muza.ui.viewmodels.PlayerController
 import java.text.SimpleDateFormat
 import java.util.*
@@ -124,8 +124,12 @@ private fun AlbumContent(
     onArtistClick: () -> Unit,
     onPlayAll: () -> Unit,
     onShufflePlay: () -> Unit,
-    playerController: PlayerController
+    playerController: PlayerController,
+    albumLikeViewModel: AlbumLikeViewModel = hiltViewModel()
 ) {
+    val likedAlbums by albumLikeViewModel.likedAlbums.collectAsStateWithLifecycle()
+    val isLiked = likedAlbums.contains(album.id)
+    val isLoading by albumLikeViewModel.isLoading.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val coverUrl = album.coverImage?.let {
         "${NetworkModule.BASE_URL}albums/${album.id}/cover"
@@ -154,6 +158,23 @@ private fun AlbumContent(
                 onShufflePlay = onShufflePlay,
                 songsCount = songs.size
             )
+        }
+
+        item {
+            IconButton(
+                onClick = {
+                    if (!isLoading) {
+                        albumLikeViewModel.toggleLike(album.id)
+                    }
+                },
+                enabled = !isLoading
+            ) {
+                Icon(
+                    imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = if (isLiked) "Unlike" else "Like",
+                    tint = if (isLiked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
 
         // Songs List

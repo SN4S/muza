@@ -53,7 +53,7 @@ fun LibraryScreen(
     }
 
     val playlists by playlistViewModel.playlists.collectAsState()
-    val albums by viewModel.albums.collectAsState()
+    val albums by viewModel.likedAlbums.collectAsState()
     val likedSongs by viewModel.likedSongs.collectAsState()
     val isLoading by playlistViewModel.isLoading.collectAsState()
     val error by playlistViewModel.error.collectAsState()

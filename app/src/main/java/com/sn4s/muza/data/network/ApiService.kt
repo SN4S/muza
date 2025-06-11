@@ -179,6 +179,21 @@ interface ApiService {
         @Part cover: MultipartBody.Part?
     ): Album
 
+    // Album likes
+    @POST("albums/{albumId}/like")
+    suspend fun likeAlbum(@Path("albumId") albumId: Int)
+
+    @DELETE("albums/{albumId}/like")
+    suspend fun unlikeAlbum(@Path("albumId") albumId: Int)
+
+    @GET("albums/{albumId}/is-liked")
+    suspend fun isAlbumLiked(@Path("albumId") albumId: Int): LikeResponse
+
+    @GET("users/me/liked-albums")
+    suspend fun getLikedAlbums(
+        @Query("skip") skip: Int = 0,
+        @Query("limit") limit: Int = 100
+    ): List<Album>
 
     @GET("albums/")
     suspend fun getAlbums(
