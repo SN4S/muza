@@ -44,6 +44,7 @@ fun USongItem(
     // Collection context for smart playback
     collectionSongs: List<Song>? = null,
     playbackMode: PlaybackMode = PlaybackMode.SINGLE_SONG,
+    onRemoveFromPlaylist: (() -> Unit)? = null,
     // Controllers
     playerController: PlayerController = hiltViewModel(),
     likeViewModel: LikeViewModel = hiltViewModel()
@@ -285,14 +286,22 @@ fun USongItem(
                 },
                 leadingIcon = { Icon(Icons.Default.PlaylistAdd, contentDescription = null) }
             )
-            DropdownMenuItem(
-                text = { Text("Share") },
-                onClick = {
-                    // TODO: Implement share
-                    showMoreMenu = false
-                },
-                leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) }
-            )
+            onRemoveFromPlaylist?.let { removeCallback ->
+                DropdownMenuItem(
+                    text = { Text("Remove from Playlist") },
+                    onClick = {
+                        removeCallback()
+                        showMoreMenu = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.PlaylistRemove,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                )
+            }
         }
     }
 

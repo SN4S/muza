@@ -153,7 +153,10 @@ fun PlaylistDetailScreen(
                                         USongItem(
                                             song = song,
                                             collectionSongs = playlist!!.songs,
-                                            playbackMode = PlaybackMode.FROM_COLLECTION
+                                            playbackMode = PlaybackMode.FROM_COLLECTION,
+                                            onRemoveFromPlaylist = {
+                                                viewModel.removeSongFromPlaylist(playlistId, song.id)
+                                            }
                                         )
                                     }
                                 }

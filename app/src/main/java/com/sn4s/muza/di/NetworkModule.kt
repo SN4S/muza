@@ -4,6 +4,7 @@ import android.util.Log
 import com.sn4s.muza.data.model.RefreshTokenRequest
 import com.sn4s.muza.data.network.ApiService
 import com.sn4s.muza.data.security.TokenManager
+import com.sn4s.muza.utils.ApiConfig
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -25,7 +26,7 @@ import okhttp3.Authenticator
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
-    const val BASE_URL = "http://192.168.88.188:8000/"
+    val BASE_URL = ApiConfig.BASE_URL
 
     private val _unauthorizedEvent = MutableSharedFlow<Unit>()
     val unauthorizedEvent: SharedFlow<Unit> = _unauthorizedEvent
