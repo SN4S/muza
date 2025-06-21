@@ -1,6 +1,7 @@
 package com.sn4s.muza.data.repository
 
 import android.content.Context
+import android.util.Log
 import com.sn4s.muza.data.model.*
 import com.sn4s.muza.data.network.ApiService
 import com.sn4s.muza.data.security.TokenManager
@@ -380,8 +381,18 @@ class MusicRepository @Inject constructor(
         return apiService.getUserProfile(userId)
     }
 
+//    fun getMyFollowing(skip: Int = 0, limit: Int = 50): Flow<List<UserProfile>> = flow {
+//        emit(apiService.getMyFollowing(skip, limit))
+//    }
+
     fun getMyFollowing(skip: Int = 0, limit: Int = 50): Flow<List<UserProfile>> = flow {
-        emit(apiService.getMyFollowing(skip, limit))
+        try {
+            val response = apiService.getMyFollowing(skip, limit)
+            emit(response)
+        } catch (e: Exception) {
+            Log.e("MusicRepository", "Error getting following", e)
+            emit(emptyList())
+        }
     }
 
     fun getMyFollowers(skip: Int = 0, limit: Int = 50): Flow<List<UserProfile>> = flow {

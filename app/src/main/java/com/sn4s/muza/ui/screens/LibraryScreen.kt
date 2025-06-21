@@ -25,9 +25,11 @@ import coil.request.ImageRequest
 import com.sn4s.muza.data.model.Album
 import com.sn4s.muza.data.model.Playlist
 import com.sn4s.muza.data.model.Song
-import com.sn4s.muza.data.repository.MusicRepository
+import com.sn4s.muza.data.model.User
+import com.sn4s.muza.data.model.UserProfile
 import com.sn4s.muza.di.NetworkModule
 import com.sn4s.muza.ui.components.CreatePlaylistDialog
+import com.sn4s.muza.ui.components.UserAvatar
 import com.sn4s.muza.ui.viewmodels.LibraryViewModel
 import com.sn4s.muza.ui.viewmodels.PlayerController
 import com.sn4s.muza.ui.viewmodels.PlaylistViewModel
@@ -42,6 +44,8 @@ fun LibraryScreen(
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val followedArtists by viewModel.followedArtists.collectAsState()
+
     LaunchedEffect(Unit) {
         NetworkModule.unauthorizedEvent.collect {
             if (currentRoute != "login") {
@@ -136,6 +140,7 @@ fun LibraryScreen(
                 val allItems = buildList {
                     addAll(playlists.map { LibraryItem.PlaylistItem(it) })
                     addAll(albums.map { LibraryItem.AlbumItem(it) })
+                    addAll(followedArtists.map { LibraryItem.ArtistItem(it)})
                 }.sortedWith(getSortComparator(sortBy))
 
                 if (allItems.isEmpty() && !isLoading) {
@@ -157,6 +162,12 @@ fun LibraryScreen(
                                 AlbumListItem(
                                     album = item.album,
                                     onClick = { navController.navigate("album/${item.album.id}") }
+                                )
+                            }
+                            is LibraryItem.ArtistItem ->{
+                                FollowedArtistItem(
+                                    artist = item.artist,
+                                    navController
                                 )
                             }
                         }
@@ -207,6 +218,27 @@ fun LibraryScreen(
                     }
                 }
             }
+            LibraryFilter.FOLLOWED_ARTISTS -> {
+                val sortedArt = followedArtists
+
+                if (sortedArt.isEmpty() && !isLoading) {
+                    item {
+                        EmptyStateCard(
+                            icon = Icons.Default.Album,
+                            title = "No followed artist yet",
+                            subtitle = "Artists you subscribe will appear here",
+                            actionText = null,
+                            onActionClick = null
+                        )
+                    }
+                } else {
+                    items(sortedArt) { artist ->
+                        FollowedArtistItem(
+                            artist = artist,
+                            navController) }
+                    }
+                }
+
         }
 
         // Loading indicator
@@ -231,6 +263,57 @@ fun LibraryScreen(
                 showCreatePlaylistDialog = false
             }
         )
+    }
+}
+
+@Composable
+private fun FollowedArtistItem(
+    artist: UserProfile,
+    navController: NavController
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { navController.navigate("artist/${artist.id}") },
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            UserAvatar(
+                userId = artist.id,
+                username = artist.username,
+                imageUrl = artist.image,
+                size = 48.dp
+            )
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = artist.username,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "Artist • ",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Icon(
+                Icons.Default.ChevronRight,
+                contentDescription = "View artist",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -624,12 +707,14 @@ private fun LibraryEmptyState(
 sealed class LibraryItem {
     data class PlaylistItem(val playlist: Playlist) : LibraryItem()
     data class AlbumItem(val album: Album) : LibraryItem()
+    data class ArtistItem(val artist: UserProfile) : LibraryItem()
 }
 
 enum class LibraryFilter(val displayName: String) {
     ALL("All"),
     PLAYLISTS("Playlists"),
-    ALBUMS("Albums")
+    ALBUMS("Albums"),
+    FOLLOWED_ARTISTS("Followed")
 }
 
 enum class SortOption(val displayName: String) {
@@ -645,18 +730,21 @@ private fun getSortComparator(sortBy: SortOption): Comparator<LibraryItem> {
             when (item) {
                 is LibraryItem.PlaylistItem -> item.playlist.createdAt
                 is LibraryItem.AlbumItem -> item.album.createdAt
+                is LibraryItem.ArtistItem -> item.artist.songCount
             }
         }
         SortOption.ALPHABETICAL -> compareBy { item ->
             when (item) {
                 is LibraryItem.PlaylistItem -> item.playlist.name
                 is LibraryItem.AlbumItem -> item.album.title
+                is LibraryItem.ArtistItem -> item.artist.username
             }
         }
         SortOption.MOST_PLAYED -> compareByDescending { item ->
             when (item) {
                 is LibraryItem.PlaylistItem -> item.playlist.songs.size
                 is LibraryItem.AlbumItem -> item.album.songs.size
+                is LibraryItem.ArtistItem -> item.artist.followerCount
             }
         }
     }

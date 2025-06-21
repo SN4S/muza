@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.sn4s.muza.data.model.Album
 import com.sn4s.muza.data.model.Playlist
 import com.sn4s.muza.data.model.Song
+import com.sn4s.muza.data.model.UserProfile
 import com.sn4s.muza.data.repository.MusicRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -33,6 +34,9 @@ class LibraryViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _followedArtists = MutableStateFlow<List<UserProfile>>(emptyList())
+    val followedArtists: StateFlow<List<UserProfile>> = _followedArtists
+
     init {
         loadContent()
     }
@@ -41,6 +45,7 @@ class LibraryViewModel @Inject constructor(
         loadPlaylists()
         loadAlbums()
         loadLikedSongs()
+        loadFollowedArtists()
     }
 
     private fun loadPlaylists() {
@@ -56,6 +61,23 @@ class LibraryViewModel @Inject constructor(
                     }
             } catch (e: Exception) {
                 Log.e("LibraryViewModel", "Error loading playlists", e)
+            }
+        }
+    }
+
+    private fun loadFollowedArtists() {
+        viewModelScope.launch {
+            try {
+                repository.getMyFollowing()
+                    .catch { e ->
+                        Log.e("LibraryViewModel", "Failed to load followed artists", e)
+                    }
+                    .collect { artists ->
+                        _followedArtists.value = artists
+                        Log.d("LibraryViewModel", "Loaded ${artists.size} followed artists")
+                    }
+            } catch (e: Exception) {
+                Log.e("LibraryViewModel", "Error loading followed artists", e)
             }
         }
     }
